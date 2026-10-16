@@ -1,5 +1,5 @@
-import RoleLogin from '@/components/role-login'
+import RealRolePortal from '@/components/real-role-portal'
 
 export default function Page() {
-  return <RoleLogin />
+  return <RealRolePortal />
 }
