@@ -1,0 +1,16 @@
+import mongoose, { Schema } from 'mongoose'
+
+const userSchema = new Schema({ name: { type: String, required: true, trim: true }, email: { type: String, required: true, unique: true, lowercase: true, index: true }, passwordHash: { type: String, required: true }, role: { type: String, enum: ['student','staff','officer','admin'], default: 'student', index: true }, studentId: { type: String, unique: true, sparse: true }, department: String }, { timestamps: true })
+const profileSchema = new Schema({ user: { type: Schema.Types.ObjectId, ref: 'User', unique: true }, course: String, academicYear: String, semester: Number, percentage: Number, familyIncome: Number, category: String, bankDetails: { accountLast4: String, ifsc: String }, documents: [{ type: Schema.Types.ObjectId, ref: 'Document' }] }, { timestamps: true })
+const scholarshipSchema = new Schema({ name: { type: String, required: true }, provider: { type: String, required: true }, description: String, amount: { type: Number, required: true, min: 0 }, deadline: { type: Date, required: true, index: true }, published: { type: Boolean, default: false, index: true }, eligibility: { minPercentage: Number, maxFamilyIncome: Number, courses: [String], categories: [String], academicYears: [String] }, requiredDocuments: [String] }, { timestamps: true })
+const applicationSchema = new Schema({ applicationNumber: { type: String, unique: true, index: true }, student: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true }, scholarship: { type: Schema.Types.ObjectId, ref: 'Scholarship', required: true }, status: { type: String, enum: ['Draft','Submitted','Under Department Verification','Under Officer Verification','Correction Required','Approved','Rejected'], default: 'Draft', index: true }, remarks: String, submittedAt: Date, documents: [{ type: Schema.Types.ObjectId, ref: 'Document' }] }, { timestamps: true })
+const documentSchema = new Schema({ owner: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true }, application: { type: Schema.Types.ObjectId, ref: 'Application' }, type: { type: String, required: true }, originalName: String, storedName: String, mimeType: String, size: Number }, { timestamps: true })
+const notificationSchema = new Schema({ user: { type: Schema.Types.ObjectId, ref: 'User', index: true }, title: String, message: String, read: { type: Boolean, default: false } }, { timestamps: true })
+const auditSchema = new Schema({ actor: { type: Schema.Types.ObjectId, ref: 'User' }, action: String, entity: String, entityId: String, remarks: String }, { timestamps: true })
+export const User = mongoose.models.User || mongoose.model('User', userSchema)
+export const StudentProfile = mongoose.models.StudentProfile || mongoose.model('StudentProfile', profileSchema)
+export const Scholarship = mongoose.models.Scholarship || mongoose.model('Scholarship', scholarshipSchema)
+export const Application = mongoose.models.Application || mongoose.model('Application', applicationSchema)
+export const Document = mongoose.models.Document || mongoose.model('Document', documentSchema)
+export const Notification = mongoose.models.Notification || mongoose.model('Notification', notificationSchema)
+export const AuditLog = mongoose.models.AuditLog || mongoose.model('AuditLog', auditSchema)
