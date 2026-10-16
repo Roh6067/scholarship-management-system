@@ -4,7 +4,7 @@ import cors from 'cors'
 import helmet from 'helmet'
 import rateLimit from 'express-rate-limit'
 import cookieParser from 'cookie-parser'
-import { connectDatabase } from './lib/database'
+import { connectDatabase, databaseReady } from './lib/database'
 import authRoutes from './routes/auth'
 import scholarshipRoutes from './routes/scholarships'
 import applicationRoutes from './routes/applications'
@@ -20,7 +20,7 @@ app.use(cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', creden
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }))
-app.get('/api/health', (_req, res) => res.json({ ok: true, service: 'scholarflow-api' }))
+app.get('/api/health', (_req, res) => res.status(databaseReady() ? 200 : 503).json({ ok: databaseReady(), service: 'scholarflow-api', database: databaseReady() ? 'connected' : 'disconnected' }))
 app.use('/api/auth', authRoutes)
 app.use('/api/scholarships', scholarshipRoutes)
 app.use('/api/applications', applicationRoutes)
