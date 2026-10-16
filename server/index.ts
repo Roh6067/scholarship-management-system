@@ -12,6 +12,7 @@ import dashboardRoutes from './routes/dashboard'
 import profileRoutes from './routes/profile'
 import notificationRoutes from './routes/notifications'
 import adminRoutes from './routes/admin'
+import documentRoutes from './routes/documents'
 import { errorHandler } from './middleware/error'
 
 const app = express()
@@ -29,6 +30,7 @@ app.use('/api/dashboard', dashboardRoutes)
 app.use('/api/profile', profileRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/documents', documentRoutes)
 app.use(errorHandler)
 
 connectDatabase().then(() => app.listen(port, () => console.log(`[v0] API listening on ${port}`))).catch((error) => { console.error('[v0] Database connection failed', error); process.exit(1) })
