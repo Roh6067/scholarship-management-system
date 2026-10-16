@@ -1,5 +1,5 @@
-import ScholarshipDashboard from '@/components/scholarship-dashboard'
+import RoleLogin from '@/components/role-login'
 
 export default function Page() {
-  return <ScholarshipDashboard />
+  return <RoleLogin />
 }
