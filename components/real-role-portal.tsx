@@ -402,9 +402,21 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     }
   }
   async function updateStatus(id: string, status: string) {
+    const remarks =
+      status === "Correction Required"
+        ? window.prompt("Enter the mandatory correction reason:", "")?.trim() ?? ""
+        : undefined;
+    if (status === "Correction Required" && !remarks) {
+      setError("A correction reason is required before requesting changes.");
+      return;
+    }
     try {
-      await applicationApi.updateStatus(id, status);
-      setMessage(`Application marked ${status.toLowerCase()}.`);
+      await applicationApi.updateStatus(id, status, remarks);
+      setMessage(
+        status === "Correction Required"
+          ? "Correction request sent to the student."
+          : `Application marked ${status.toLowerCase()}.`,
+      );
       await loadData();
     } catch (cause: any) {
       setError(
@@ -1004,7 +1016,12 @@ function ApplicationTable({ applications, loading, role, onStatus }: any) {
     try {
       const response = await applicationApi.submit(item._id);
       console.log("Application submitted:", response.data);
-      alert("Application submitted successfully!");
+      alert(
+        item.status === "Correction Required"
+          ? "Application resubmitted successfully!"
+          : "Application submitted successfully!",
+      );
+      window.location.reload();
     } catch (cause: any) {
       const data = cause.response?.data;
 
@@ -1021,7 +1038,9 @@ function ApplicationTable({ applications, loading, role, onStatus }: any) {
   }}
   className="cursor-pointer text-sm font-bold text-teal-700 hover:underline"
 >
-  Submit
+                      {item.status === "Correction Required"
+                        ? "Resubmit Application"
+                        : "Submit"}
 </button>
 
                       )}

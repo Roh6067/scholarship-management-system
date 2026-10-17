@@ -302,10 +302,15 @@ router.patch(
         return res.status(404).json({ message: "Application not found" });
       const validCurrent =
         req.user!.role === "staff"
-          ? ["Submitted"]
+          ? ["Submitted", "Under Department Verification"]
           : req.user!.role === "officer"
-            ? ["Under Department Verification"]
+            ? ["Under Department Verification", "Under Officer Verification"]
             : ["Under Officer Verification", "Correction Required"];
+      const remarks = String(req.body.remarks ?? "").trim();
+      if (nextStatus === "Correction Required" && !remarks)
+        return res.status(400).json({
+          message: "A correction reason or remark is required.",
+        });
       if (!validCurrent.includes(application.status))
         return res
           .status(409)
