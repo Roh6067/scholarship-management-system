@@ -2,7 +2,7 @@ import mongoose, { Schema } from 'mongoose'
 
 const verificationSchema = new Schema({
   actor: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  role: { type: String, enum: ['staff', 'officer', 'admin'], required: true },
+  role: { type: String, enum: ['staff', 'officer', 'director','admin'], required: true },
   status: { type: String, required: true },
   remarks: { type: String, trim: true, maxlength: 2000 },
 }, { timestamps: true })

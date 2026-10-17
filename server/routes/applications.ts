@@ -15,6 +15,7 @@ router.use(requireAuth);
 const transitions: Record<string, string[]> = {
   staff: ["Under Department Verification", "Correction Required"],
   officer: ["Under Officer Verification", "Correction Required", "Rejected"],
+  director: ["Approved", "Rejected"],
   admin: ["Approved", "Rejected", "Correction Required"],
 };
 router.get("/", async (req: AuthRequest, res, next) => {
@@ -213,7 +214,6 @@ const matchingDocuments = await Document.find({
 
 
 // Existing attachment logic yahan rehne do
-      // Attach matching documents without removing existing attachments
       
 const existingIds = (application.documents ?? []).map((doc: any) => {
   if (typeof doc === "string") return doc;
@@ -236,28 +236,36 @@ const existingIds = (application.documents ?? []).map((doc: any) => {
       application.documents = allDocumentIds as any;
 
 
-      const ownedDocuments = await Document.find({
-        _id: { $in: allDocumentIds },
-        owner: req.user!._id,
-      }).select("_id type");
+      
+const ownedDocuments = await Document.find({
+  _id: { $in: allDocumentIds },
+  owner: req.user!._id,
+}).select("_id type");
 
-      const attachedTypes = new Set(
-        ownedDocuments.map((doc: any) => doc.type),
-      );
+const normalizeDocumentType = (type: string) =>
+  type.toLowerCase().trim().replace(/[\s_-]+/g, "");
 
-      const missingTypes = required.filter(
-        (type: string) => !attachedTypes.has(type),
-      );
+const attachedTypes = new Set(
+  ownedDocuments.map((doc: any) =>
+    normalizeDocumentType(doc.type),
+  ),
+);
 
-      if (missingTypes.length > 0) {
-        return res.status(400).json({
-          message:
-            "Attach all required scholarship documents before submitting.",
-          missingTypes,
-          requiredTypes: required,
-          attachedTypes: [...attachedTypes],
-        });
-      }
+const missingTypes = required.filter(
+  (type: string) =>
+    !attachedTypes.has(normalizeDocumentType(type)),
+);
+
+if (missingTypes.length > 0) {
+  return res.status(400).json({
+    message:
+      "Attach all required scholarship documents before submitting.",
+    missingTypes,
+    requiredTypes: required,
+    attachedTypes: ownedDocuments.map((doc: any) => doc.type),
+  });
+}
+
 
 application.status = "Submitted";
 application.submittedAt = new Date();
@@ -287,7 +295,7 @@ await application.save();
 
 router.patch(
   "/:id/status",
-  allowRoles("staff", "officer", "admin"),
+  allowRoles("staff", "officer", "director", "admin"),
   async (req: AuthRequest, res, next) => {
     try {
       const nextStatus = String(req.body.status);

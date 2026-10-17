@@ -1044,16 +1044,30 @@ function ApplicationTable({ applications, loading, role, onStatus }: any) {
 </button>
 
                       )}
-                    {role === "staff" && item.status === "Submitted" && (
-                      <button
-                        onClick={() =>
-                          onStatus(item._id, "Under Department Verification")
-                        }
-                        className="cursor-pointer text-sm font-bold text-teal-700 hover:underline"
-                      >
-                        Verify
-                      </button>
-                    )}
+                
+    
+{role === "staff" && item.status === "Submitted" && (
+  <button
+    onClick={() =>
+      onStatus(item._id, "Under Department Verification")
+    }
+    className="cursor-pointer text-sm font-bold text-teal-700 hover:underline"
+  >
+    Verify
+  </button>
+)}
+
+                    
+{role === "staff" &&
+  ["Submitted", "Under Department Verification"].includes(item.status) && (
+    <button
+      onClick={() => onStatus(item._id, "Correction Required")}
+      className="cursor-pointer text-sm font-bold text-rose-700 hover:underline"
+    >
+      Correction Required
+    </button>
+  )}
+
                     {role === "officer" &&
                       item.status === "Under Department Verification" && (
                         <button
