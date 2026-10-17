@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'ScholarFlow | Scholarship Portal',
+  description: 'Secure scholarship management for students, staff, and directors.',
   generator: 'v0.app',
   icons: {
     icon: [
