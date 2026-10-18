@@ -22,6 +22,17 @@ app.use(cors({ origin: process.env.CLIENT_URL ?? 'http://localhost:3000', creden
 app.use(express.json({ limit: '1mb' }))
 app.use(cookieParser())
 app.use('/api', rateLimit({ windowMs: 15 * 60 * 1000, limit: 300 }))
+
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  message: { message: 'Too many authentication attempts, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+})
+app.use('/api/auth/login', authRateLimiter)
+app.use('/api/auth/register', authRateLimiter)
+
 app.get('/api/health', (_req, res) => res.status(databaseReady() ? 200 : 503).json({ ok: databaseReady(), service: 'scholarflow-api', database: databaseReady() ? 'connected' : 'disconnected' }))
 app.use('/api/auth', authRoutes)
 app.use('/api/scholarships', scholarshipRoutes)
