@@ -31,6 +31,23 @@ import {
 } from "@/lib/api";
 import AdminManagement from "@/components/admin-management";
 
+
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+
+
 type Role = "student" | "staff" | "officer" | "director" | "admin";
 type User = {
   id: string;
@@ -346,9 +363,9 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
   const isStudent = user.role === "student";
-  async function loadData() {
-    setLoading(true);
-    setError("");
+  async function loadData(silent = false) {
+  if (!silent) setLoading(true);
+  setError("");
     try {
       const [apps, stat, schol] = await Promise.all([
         applicationApi.list(),
@@ -383,9 +400,17 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
       setLoading(false);
     }
   }
+  
   useEffect(() => {
-    loadData();
+    void loadData();
+
+    const refreshInterval = window.setInterval(() => {
+      void loadData(true);
+    }, 30_000);
+
+    return () => window.clearInterval(refreshInterval);
   }, [isStudent]);
+
   async function apply(scholarship: Scholarship) {
     try {
       const response = await applicationApi.create(scholarship._id);
@@ -440,6 +465,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
           : applications,
     [applications, active],
   );
+  
   const cards = isStudent
     ? [
         ["My applications", applications.length],
@@ -449,12 +475,54 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
         ["Correction requests", stats.correctionRequired ?? 0],
         ["Available scholarships", stats.scholarships ?? scholarships.length],
       ]
-    : [
-        ["Total applications", stats.totalApplications ?? applications.length],
-        ["Pending review", stats.pending ?? 0],
-        ["Approved", stats.approved ?? 0],
-        ["Rejected", stats.rejected ?? 0],
-      ];
+    : user.role === "staff"
+      ? [
+          ["Total applications", stats.totalApplications ?? applications.length],
+          ["New submissions", stats.byStatus?.Submitted ?? 0],
+          ["Department verification", stats.byStatus?.["Under Department Verification"] ?? 0],
+          ["Correction requests", stats.correctionRequired ?? 0],
+        ]
+      : user.role === "officer"
+        ? [
+            ["Total applications", stats.totalApplications ?? applications.length],
+            ["Awaiting verification", stats.byStatus?.["Under Department Verification"] ?? 0],
+            ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
+            ["Correction requests", stats.correctionRequired ?? 0],
+          ]
+        : user.role === "director"
+          ? [
+              ["Total applications", stats.totalApplications ?? applications.length],
+              ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
+              ["Approved", stats.approved ?? 0],
+              ["Rejected", stats.rejected ?? 0],
+            ]
+          : [
+              ["Total applications", stats.totalApplications ?? applications.length],
+              ["Pending review", stats.pending ?? 0],
+              ["Approved", stats.approved ?? 0],
+              ["Rejected", stats.rejected ?? 0],
+            ];
+
+
+      
+  const statusColors: Record<string, string> = {
+    Draft: "#94a3b8",
+    Submitted: "#3b82f6",
+    "Under Department Verification": "#8b5cf6",
+    "Under Officer Verification": "#f59e0b",
+    "Correction Required": "#f97316",
+    Approved: "#10b981",
+    Rejected: "#ef4444",
+  };
+
+  const statusChartData = Object.entries(stats.byStatus ?? {})
+    .map(([name, value]) => ({
+      name,
+      value: Number(value),
+    }))
+    .filter((item) => item.value > 0);
+
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <aside
@@ -521,7 +589,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             </div>
           </div>
           <button
-            onClick={loadData}
+            onClick={() => loadData()}
             className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100"
             aria-label="Refresh data"
           >
@@ -570,6 +638,125 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                   </div>
                 ))}
               </div>
+              
+              <div className="grid gap-6 xl:grid-cols-2">
+                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <h2 className="text-lg font-bold text-[#193b61]">
+  {user.role === "student"
+    ? "My Application Status"
+    : user.role === "staff"
+      ? "Application Verification Overview"
+      : user.role === "officer"
+        ? "Officer Review Overview"
+        : user.role === "director"
+          ? "Final Decision Overview"
+          : "System-wide Application Status"}
+</h2>
+<p className="mt-1 text-sm text-slate-500">
+  {user.role === "student"
+    ? "Track the status of your scholarship applications"
+    : user.role === "staff"
+      ? "Monitor application statuses and department verification"
+      : user.role === "officer"
+        ? "Monitor applications awaiting officer review"
+        : user.role === "director"
+          ? "Review application outcomes and pending final decisions"
+          : "Breakdown of all scholarship applications by status"}
+</p>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      Loading analytics...
+                    </div>
+                  ) : statusChartData.length === 0 ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      No application status data available yet.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={statusChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={55}
+                          paddingAngle={3}
+                        >
+                          {statusChartData.map((entry) => (
+                            <Cell
+                              key={entry.name}
+                              fill={statusColors[entry.name] ?? "#64748b"}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </section>
+
+                
+                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <h2 className="text-lg font-bold text-[#193b61]">
+  {user.role === "student"
+    ? "My Monthly Applications"
+    : user.role === "staff"
+      ? "Monthly Verification Workload"
+      : user.role === "officer"
+        ? "Monthly Officer Review Trends"
+        : user.role === "director"
+          ? "Monthly Decision Trends"
+          : "Monthly System Application Trends"}
+</h2>
+<p className="mt-1 text-sm text-slate-500">
+  Application submissions over the last six months
+</p>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      Loading trends...
+                    </div>
+                  ) : !Array.isArray(stats.monthlyTrend) ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      Monthly trend data is not available.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart
+  data={
+    user.role === "student"
+      ? stats.monthlyTrend
+      : stats.roleActivityTrend ?? stats.monthlyTrend
+  }
+>
+  <CartesianGrid strokeDasharray="3 3" />
+  <XAxis dataKey="month" />
+  <YAxis allowDecimals={false} />
+  <Tooltip />
+  <Line
+    type="monotone"
+    dataKey="applications"
+    name={user.role === "student" ? "Submitted applications" : "Verification / decision actions"}
+    stroke="#0d9488"
+    strokeWidth={3}
+    dot={{ r: 4 }}
+    activeDot={{ r: 6 }}
+  />
+</LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </section>
+
+              </div>
+
               <ApplicationTable
                 applications={applications.slice(0, 5)}
                 loading={loading}
