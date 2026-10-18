@@ -309,11 +309,13 @@ router.patch(
       if (!application)
         return res.status(404).json({ message: "Application not found" });
       const validCurrent =
-        req.user!.role === "staff"
-          ? ["Submitted", "Under Department Verification"]
-          : req.user!.role === "officer"
-            ? ["Under Department Verification", "Under Officer Verification"]
-            : ["Under Officer Verification", "Correction Required"];
+  req.user!.role === "staff"
+    ? ["Submitted", "Under Department Verification"]
+    : req.user!.role === "officer"
+      ? ["Under Department Verification", "Under Officer Verification"]
+      : req.user!.role === "director"
+        ? ["Under Officer Verification"]
+        : ["Under Officer Verification", "Correction Required"];
       const remarks = String(req.body.remarks ?? "").trim();
       if (nextStatus === "Correction Required" && !remarks)
         return res.status(400).json({
