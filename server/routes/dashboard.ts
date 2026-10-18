@@ -145,11 +145,6 @@ router.get('/stats', requireAuth, async (req: any, res, next) => {
       const statusCounts = Object.fromEntries(
         byStatus.map((row) => [row._id, row.count]),
       ) as Record<string, number>
-      const roleActivityTrend =
-  req.user.role === 'admin'
-    ? await getRoleActivityTrend('admin')
-    : await getRoleActivityTrend(req.user.role)
-
       return res.json({
         scholarships,
         applications: applications.length,
@@ -164,7 +159,6 @@ router.get('/stats', requireAuth, async (req: any, res, next) => {
         rejected: statusCounts.Rejected ?? 0,
         byStatus: statusCounts,
         monthlyTrend,
-        roleActivityTrend,
       })
     }
 
@@ -193,6 +187,8 @@ router.get('/stats', requireAuth, async (req: any, res, next) => {
       byStatus.map((row) => [row._id, row.count]),
     ) as Record<string, number>
 
+    const roleActivityTrend = await getRoleActivityTrend(req.user.role)
+
     return res.json({
       users,
       students,
@@ -211,7 +207,7 @@ router.get('/stats', requireAuth, async (req: any, res, next) => {
       correctionRequired: statusCounts['Correction Required'] ?? 0,
       byStatus: statusCounts,
       monthlyTrend,
-      roleActivityTrend
+      roleActivityTrend,
     })
   } catch (error) {
     next(error)
