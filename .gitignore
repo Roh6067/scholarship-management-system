@@ -5,3 +5,6 @@ node_modules
 !.env.example
 server/uploads
 coverage
+# Generated TypeScript files
+next-env.d.ts
+*.tsbuildinfo

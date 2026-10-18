@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   BookOpen,
   CheckCircle2,
@@ -30,6 +30,23 @@ import {
   scholarshipApi,
 } from "@/lib/api";
 import AdminManagement from "@/components/admin-management";
+
+
+import {
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  Legend,
+  LineChart,
+  Line,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+} from "recharts";
+
+
 
 type Role = "student" | "staff" | "officer" | "director" | "admin";
 type User = {
@@ -91,6 +108,14 @@ type Notification = {
   read: boolean;
   createdAt: string;
 };
+type Pagination = {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrev: boolean;
+};
 
 export const labels: Record<Role, string> = {
   student: "Student",
@@ -149,6 +174,19 @@ export default function RealRolePortal() {
       })
       .catch(() => undefined)
       .finally(() => setChecking(false));
+
+    const handleAuthExpired = () => {
+      setUser(null);
+      setError("Your session has expired. Please log in again.");
+      setNotice("");
+      setMode("login");
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", "/");
+      }
+    };
+
+    window.addEventListener("auth:expired", handleAuthExpired);
+    return () => window.removeEventListener("auth:expired", handleAuthExpired);
   }, []);
   function redirectForRole(nextRole: Role) {
     if (
@@ -166,10 +204,10 @@ export default function RealRolePortal() {
         mode === "register"
           ? await authApi.register(form)
           : await authApi.login({
-              email: form.email,
-              password: form.password,
-              expectedRole: role,
-            });
+            email: form.email,
+            password: form.password,
+            expectedRole: role,
+          });
       setUser(response.data.user);
       redirectForRole(response.data.user.role);
       if (mode === "register")
@@ -333,6 +371,8 @@ function Login({
   );
 }
 
+const APP_PAGE_LIMIT = 20;
+
 function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
   const [active, setActive] = useState("Overview"),
     [open, setOpen] = useState(false),
@@ -345,25 +385,59 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     [loading, setLoading] = useState(true),
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
+
+  // ── Pagination state ──────────────────────────────────────────────────────
+  const [applPage, setApplPage] = useState(1);
+  const [applStatus, setApplStatus] = useState("");
+  const [applPagination, setApplPagination] = useState<Pagination | null>(null);
+
   const isStudent = user.role === "student";
-  async function loadData() {
-    setLoading(true);
+
+  const loadApplications = useCallback(
+    async (page: number, status: string, silent: boolean) => {
+      try {
+        const params: { page: number; limit: number; status?: string } = {
+          page,
+          limit: APP_PAGE_LIMIT,
+        };
+        if (status) params.status = status;
+        const apps = await applicationApi.list(params);
+        const data = apps.data;
+        // Support both paginated { applications, pagination } and legacy bare array
+        if (Array.isArray(data)) {
+          setApplications(data);
+          setApplPagination(null);
+        } else {
+          setApplications(data.applications ?? []);
+          setApplPagination(data.pagination ?? null);
+        }
+      } catch (cause: any) {
+        if (!silent) {
+          setError(
+            cause.response?.data?.message ??
+            "We could not load your latest workspace data.",
+          );
+        }
+      }
+    },
+    [],
+  );
+
+  async function loadData(silent = false) {
+    if (!silent) setLoading(true);
     setError("");
     try {
-      const [apps, stat, schol] = await Promise.all([
-        applicationApi.list(),
+      const [stat, schol] = await Promise.all([
         dashboardApi.stats(),
         isStudent ? scholarshipApi.list() : Promise.resolve({ data: [] }),
       ]);
-      setApplications(
-        Array.isArray(apps.data) ? apps.data : (apps.data.applications ?? []),
-      );
       setStats(stat.data.stats ?? stat.data);
       setScholarships(
         Array.isArray(schol.data)
           ? schol.data
           : (schol.data.scholarships ?? []),
       );
+      await loadApplications(applPage, applStatus, silent);
       if (isStudent) {
         const [docs, prof, notes] = await Promise.all([
           documentApi.list(),
@@ -377,84 +451,223 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     } catch (cause: any) {
       setError(
         cause.response?.data?.message ??
-          "We could not load your latest workspace data.",
+        "We could not load your latest workspace data.",
       );
     } finally {
       setLoading(false);
     }
   }
+
+  // Re-fetch when page or status filter changes
   useEffect(() => {
-    loadData();
+    void loadApplications(applPage, applStatus, false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applPage, applStatus]);
+
+  useEffect(() => {
+    void loadData();
+
+    const refreshInterval = window.setInterval(() => {
+      void loadData(true);
+    }, 30_000);
+
+    return () => window.clearInterval(refreshInterval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isStudent]);
+
   async function apply(scholarship: Scholarship) {
     try {
-      const response = await applicationApi.create(scholarship._id);
-      setApplications((items) => [
-        response.data.application ?? response.data,
-        ...items,
-      ]);
+      await applicationApi.create(scholarship._id);
       setMessage(`Draft started for ${scholarship.name}.`);
       setActive("My applications");
+      // Reset to page 1 so the new draft is visible immediately
+      setApplPage(1);
+      setApplStatus("");
+      await loadApplications(1, "", false);
     } catch (cause: any) {
       setError(
         cause.response?.data?.message ?? "Unable to start this application.",
       );
     }
   }
-  async function updateStatus(id: string, status: string) {
-    const remarks =
-      status === "Correction Required"
-        ? window.prompt("Enter the mandatory correction reason:", "")?.trim() ?? ""
-        : undefined;
-    if (status === "Correction Required" && !remarks) {
-      setError("A correction reason is required before requesting changes.");
-      return;
-    }
+  const [remarkDialog, setRemarkDialog] = useState<{
+    open: boolean;
+    applicationId: string;
+    nextStatus: string;
+    remarks: string;
+    error?: string;
+    submitting?: boolean;
+  }>({
+    open: false,
+    applicationId: "",
+    nextStatus: "",
+    remarks: "",
+  });
+
+  async function executeStatusUpdate(
+    id: string,
+    status: string,
+    remarks?: string,
+  ) {
+    setError("");
+    setMessage("");
     try {
       await applicationApi.updateStatus(id, status, remarks);
       setMessage(
         status === "Correction Required"
           ? "Correction request sent to the student."
-          : `Application marked ${status.toLowerCase()}.`,
+          : status === "Rejected"
+            ? "Application marked as rejected."
+            : `Application marked ${status.toLowerCase()}.`,
       );
-      await loadData();
+      // Reload at the current page so pagination state is preserved
+      await loadApplications(applPage, applStatus, true);
+      return true;
     } catch (cause: any) {
       setError(
         cause.response?.data?.message ??
-          "That action is not available for this role.",
+        "That action is not available for this role.",
       );
+      return false;
     }
   }
-  const filtered = useMemo(
-    () =>
-      active === "My applications"
-        ? applications
-        : active.includes("queue") ||
-            active.includes("Queue") ||
-            active.includes("decisions") ||
-            active.includes("Recommendations") ||
-            active.includes("Correction")
-          ? applications.filter(
-              (a) => !["Approved", "Rejected"].includes(a.status),
-            )
-          : applications,
-    [applications, active],
-  );
+
+  function handleStatusClick(id: string, status: string) {
+    if (status === "Correction Required" || status === "Rejected") {
+      setRemarkDialog({
+        open: true,
+        applicationId: id,
+        nextStatus: status,
+        remarks: "",
+        error: undefined,
+        submitting: false,
+      });
+      return;
+    }
+    void executeStatusUpdate(id, status);
+  }
+
+  async function submitRemarkDialog() {
+    const trimmed = remarkDialog.remarks.trim();
+    if (!trimmed) {
+      setRemarkDialog((prev) => ({
+        ...prev,
+        error:
+          prev.nextStatus === "Correction Required"
+            ? "A correction reason or remark is required."
+            : "A rejection reason or remark is required.",
+      }));
+      return;
+    }
+
+    setRemarkDialog((prev) => ({
+      ...prev,
+      submitting: true,
+      error: undefined,
+    }));
+    const success = await executeStatusUpdate(
+      remarkDialog.applicationId,
+      remarkDialog.nextStatus,
+      trimmed,
+    );
+    if (success) {
+      setRemarkDialog({
+        open: false,
+        applicationId: "",
+        nextStatus: "",
+        remarks: "",
+        submitting: false,
+      });
+    } else {
+      setRemarkDialog((prev) => ({ ...prev, submitting: false }));
+    }
+  }
+
+  async function submitApplication(id: string, currentStatus: string) {
+    setError("");
+    setMessage("");
+    try {
+      await applicationApi.submit(id);
+      setMessage(
+        currentStatus === "Correction Required"
+          ? "Application resubmitted successfully!"
+          : "Application submitted successfully!",
+      );
+      // Reload at current page — submitted app changes status so it may
+      // disappear from a filtered view, which is correct.
+      await loadApplications(applPage, applStatus, true);
+    } catch (cause: any) {
+      const data = cause.response?.data;
+      const errorMsg = data?.missingTypes?.length
+        ? `Missing documents: ${data.missingTypes.join(", ")}`
+        : data?.reasons?.length
+          ? data.reasons.join(". ")
+          : data?.message ?? "Application submission failed.";
+      setError(errorMsg);
+    }
+  }
+  // With server-side pagination active the server already filters by status
+  // when applStatus is set. The filtered memo is kept for the Overview
+  // tab which shows only the first 5 records as a summary.
+  const filtered = useMemo(() => applications, [applications]);
+
   const cards = isStudent
     ? [
-        ["My applications", applications.length],
-        ["Drafts", stats.drafts ?? 0],
-        ["Awaiting verification", stats.awaitingVerification ?? 0],
-        ["Approved", stats.approved ?? 0],
-        ["Correction requests", stats.correctionRequired ?? 0],
-        ["Available scholarships", stats.scholarships ?? scholarships.length],
-      ]
-    : [
+      ["My applications", applications.length],
+      ["Drafts", stats.drafts ?? 0],
+      ["Awaiting verification", stats.awaitingVerification ?? 0],
+      ["Approved", stats.approved ?? 0],
+      ["Correction requests", stats.correctionRequired ?? 0],
+      ["Available scholarships", stats.scholarships ?? scholarships.length],
+    ]
+    : user.role === "staff"
+      ? [
         ["Total applications", stats.totalApplications ?? applications.length],
-        ["Pending review", stats.pending ?? 0],
-        ["Approved", stats.approved ?? 0],
-        ["Rejected", stats.rejected ?? 0],
-      ];
+        ["New submissions", stats.byStatus?.Submitted ?? 0],
+        ["Department verification", stats.byStatus?.["Under Department Verification"] ?? 0],
+        ["Correction requests", stats.correctionRequired ?? 0],
+      ]
+      : user.role === "officer"
+        ? [
+          ["Total applications", stats.totalApplications ?? applications.length],
+          ["Awaiting verification", stats.byStatus?.["Under Department Verification"] ?? 0],
+          ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
+          ["Correction requests", stats.correctionRequired ?? 0],
+        ]
+        : user.role === "director"
+          ? [
+            ["Total applications", stats.totalApplications ?? applications.length],
+            ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
+            ["Approved", stats.approved ?? 0],
+            ["Rejected", stats.rejected ?? 0],
+          ]
+          : [
+            ["Total applications", stats.totalApplications ?? applications.length],
+            ["Pending review", stats.pending ?? 0],
+            ["Approved", stats.approved ?? 0],
+            ["Rejected", stats.rejected ?? 0],
+          ];
+
+
+
+  const statusColors: Record<string, string> = {
+    Draft: "#94a3b8",
+    Submitted: "#3b82f6",
+    "Under Department Verification": "#8b5cf6",
+    "Under Officer Verification": "#f59e0b",
+    "Correction Required": "#f97316",
+    Approved: "#10b981",
+    Rejected: "#ef4444",
+  };
+
+  const statusChartData = Object.entries(stats.byStatus ?? {})
+    .map(([name, value]) => ({
+      name,
+      value: Number(value),
+    }))
+    .filter((item) => item.value > 0);
+
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
       <aside
@@ -521,7 +734,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             </div>
           </div>
           <button
-            onClick={loadData}
+            onClick={() => loadData()}
             className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100"
             aria-label="Refresh data"
           >
@@ -570,11 +783,132 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                   </div>
                 ))}
               </div>
+
+              <div className="grid gap-6 xl:grid-cols-2">
+                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <h2 className="text-lg font-bold text-[#193b61]">
+                      {user.role === "student"
+                        ? "My Application Status"
+                        : user.role === "staff"
+                          ? "Application Verification Overview"
+                          : user.role === "officer"
+                            ? "Officer Review Overview"
+                            : user.role === "director"
+                              ? "Final Decision Overview"
+                              : "System-wide Application Status"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {user.role === "student"
+                        ? "Track the status of your scholarship applications"
+                        : user.role === "staff"
+                          ? "Monitor application statuses and department verification"
+                          : user.role === "officer"
+                            ? "Monitor applications awaiting officer review"
+                            : user.role === "director"
+                              ? "Review application outcomes and pending final decisions"
+                              : "Breakdown of all scholarship applications by status"}
+                    </p>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      Loading analytics...
+                    </div>
+                  ) : statusChartData.length === 0 ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      No application status data available yet.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <PieChart>
+                        <Pie
+                          data={statusChartData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          outerRadius={90}
+                          innerRadius={55}
+                          paddingAngle={3}
+                        >
+                          {statusChartData.map((entry) => (
+                            <Cell
+                              key={entry.name}
+                              fill={statusColors[entry.name] ?? "#64748b"}
+                            />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                        <Legend />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
+                </section>
+
+
+                <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                  <div className="mb-5">
+                    <h2 className="text-lg font-bold text-[#193b61]">
+                      {user.role === "student"
+                        ? "My Monthly Applications"
+                        : user.role === "staff"
+                          ? "Monthly Verification Workload"
+                          : user.role === "officer"
+                            ? "Monthly Officer Review Trends"
+                            : user.role === "director"
+                              ? "Monthly Decision Trends"
+                              : "Monthly System Application Trends"}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      Application submissions over the last six months
+                    </p>
+                  </div>
+
+                  {loading ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      Loading trends...
+                    </div>
+                  ) : !Array.isArray(stats.monthlyTrend) ? (
+                    <div className="flex h-64 items-center justify-center text-sm text-slate-500">
+                      Monthly trend data is not available.
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={280}>
+                      <LineChart
+                        data={
+                          user.role === "student"
+                            ? stats.monthlyTrend
+                            : stats.roleActivityTrend ?? stats.monthlyTrend
+                        }
+                      >
+                        <CartesianGrid strokeDasharray="3 3" />
+                        <XAxis dataKey="month" />
+                        <YAxis allowDecimals={false} />
+                        <Tooltip />
+                        <Line
+                          type="monotone"
+                          dataKey="applications"
+                          name={user.role === "student" ? "Submitted applications" : "Verification / decision actions"}
+                          stroke="#0d9488"
+                          strokeWidth={3}
+                          dot={{ r: 4 }}
+                          activeDot={{ r: 6 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </section>
+
+              </div>
+
               <ApplicationTable
                 applications={applications.slice(0, 5)}
                 loading={loading}
                 role={user.role}
-                onStatus={updateStatus}
+                onStatus={handleStatusClick}
+                onSubmitApplication={submitApplication}
+                isOverviewSummary
               />
             </>
           )}
@@ -620,18 +954,112 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             (!isStudent &&
               active !== "Overview" &&
               active !== "Scholarships")) && (
-            <ApplicationTable
-              applications={filtered}
-              loading={loading}
-              role={user.role}
-              onStatus={updateStatus}
-            />
-          )}
+              <ApplicationTable
+                applications={filtered}
+                loading={loading}
+                role={user.role}
+                onStatus={handleStatusClick}
+                onSubmitApplication={submitApplication}
+                pagination={applPagination}
+                currentPage={applPage}
+                currentStatus={applStatus}
+                onPageChange={(p: number) => setApplPage(p)}
+                onStatusChange={(s: string) => {
+                  setApplStatus(s);
+                  setApplPage(1);
+                }}
+              />
+            )}
           {user.role === "admin" && active === "User management" && (
             <AdminManagement />
           )}
         </main>
       </div>
+
+      {remarkDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <h3 className="text-lg font-bold text-[#193b61]">
+                {remarkDialog.nextStatus === "Correction Required"
+                  ? "Request Application Correction"
+                  : "Reject Application"}
+              </h3>
+              <button
+                onClick={() =>
+                  setRemarkDialog((prev) => ({ ...prev, open: false }))
+                }
+                className="rounded-lg p-1 text-slate-400 hover:text-slate-600"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <p className="mt-3 text-sm text-slate-600">
+              {remarkDialog.nextStatus === "Correction Required"
+                ? "Specify the changes or missing documentation required from the applicant."
+                : "Specify the reason for rejecting this application. This will be recorded and shared with the applicant."}
+            </p>
+
+            <div className="mt-4">
+              <label className="mb-1 block text-xs font-bold uppercase text-slate-500">
+                {remarkDialog.nextStatus === "Correction Required"
+                  ? "Correction Remarks *"
+                  : "Rejection Reason *"}
+              </label>
+              <textarea
+                rows={4}
+                value={remarkDialog.remarks}
+                onChange={(e) =>
+                  setRemarkDialog((prev) => ({
+                    ...prev,
+                    remarks: e.target.value,
+                    error: undefined,
+                  }))
+                }
+                placeholder={
+                  remarkDialog.nextStatus === "Correction Required"
+                    ? "e.g. Please upload an updated income certificate with official seal..."
+                    : "e.g. Criteria not met or documentation verified as invalid..."
+                }
+                className="w-full rounded-xl border border-slate-200 p-3 text-sm focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+              />
+              {remarkDialog.error && (
+                <p className="mt-1 text-xs font-semibold text-rose-600">
+                  {remarkDialog.error}
+                </p>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() =>
+                  setRemarkDialog((prev) => ({ ...prev, open: false }))
+                }
+                className="cursor-pointer rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={remarkDialog.submitting}
+                onClick={submitRemarkDialog}
+                className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${remarkDialog.nextStatus === "Correction Required"
+                  ? "bg-amber-600 hover:bg-amber-700"
+                  : "bg-rose-600 hover:bg-rose-700"
+                  }`}
+              >
+                {remarkDialog.submitting
+                  ? "Saving..."
+                  : remarkDialog.nextStatus === "Correction Required"
+                    ? "Send Correction Request"
+                    : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -655,7 +1083,7 @@ function Documents({
     "bank-proof",
     "other",
   ];
-  
+
   async function upload() {
     if (!file) return setError("Choose a document first.");
 
@@ -800,8 +1228,16 @@ function Documents({
                   </a>
                   <button
                     onClick={async () => {
-                      await documentApi.remove(doc._id);
-                      await onChanged();
+                      try {
+                        await documentApi.remove(doc._id);
+                        setMessage("Document deleted successfully.");
+                        await onChanged();
+                      } catch (cause: any) {
+                        setError(
+                          cause.response?.data?.message ??
+                          "Unable to delete document.",
+                        );
+                      }
                     }}
                     className="cursor-pointer text-rose-600 hover:text-rose-800"
                     aria-label={`Delete ${doc.originalName}`}
@@ -959,17 +1395,155 @@ function Notifications({
     </Panel>
   );
 }
-function ApplicationTable({ applications, loading, role, onStatus }: any) {
+
+const STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "Draft", label: "Draft" },
+  { value: "Submitted", label: "Submitted" },
+  { value: "Under Department Verification", label: "Dept. Verification" },
+  { value: "Under Officer Verification", label: "Officer Verification" },
+  { value: "Correction Required", label: "Correction Required" },
+  { value: "Approved", label: "Approved" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+const STAFF_STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "Submitted", label: "Submitted" },
+  {
+    value: "Under Department Verification",
+    label: "Dept. Verification",
+  },
+  { value: "Correction Required", label: "Correction Required" },
+];
+
+
+const OFFICER_STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "Under Officer Verification", label: "Officer Verification" },
+  { value: "Correction Required", label: "Correction Required" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+const DIRECTOR_STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "Approved", label: "Approved" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+const ADMIN_STATUS_FILTER_OPTIONS = [
+  { value: "", label: "All statuses" },
+  { value: "Draft", label: "Draft" },
+  { value: "Submitted", label: "Submitted" },
+  { value: "Under Department Verification", label: "Dept. Verification" },
+  { value: "Under Officer Verification", label: "Officer Verification" },
+  { value: "Correction Required", label: "Correction Required" },
+  { value: "Approved", label: "Approved" },
+  { value: "Rejected", label: "Rejected" },
+];
+
+function ApplicationTable({
+  applications,
+  loading,
+  role,
+  onStatus,
+  onSubmitApplication,
+  pagination,
+  currentPage,
+  currentStatus,
+  onPageChange,
+  onStatusChange,
+  isOverviewSummary,
+}: any) {
+  const showControls = !isOverviewSummary;
+
+
+  const statusOptions =
+    role === "staff"
+      ? STAFF_STATUS_FILTER_OPTIONS
+      : role === "officer"
+        ? OFFICER_STATUS_FILTER_OPTIONS
+        : role === "director"
+          ? DIRECTOR_STATUS_FILTER_OPTIONS
+          : role === "admin"
+            ? ADMIN_STATUS_FILTER_OPTIONS
+            : STATUS_FILTER_OPTIONS;
+
   return (
     <Panel
-      title={role === "student" ? "My applications" : "Application workflow"}
-      subtitle="Live records from the scholarship system"
+      title={
+        isOverviewSummary
+          ? "Recent applications"
+          : role === "student"
+            ? "My applications"
+            : "Application workflow"
+      }
+      subtitle={
+        isOverviewSummary
+          ? "Latest 5 records — go to My applications for the full list"
+          : pagination
+            ? `Page ${pagination.page} of ${pagination.totalPages} · ${pagination.total} total`
+            : "Live records from the scholarship system"
+      }
     >
+      {/* ── Status filter + pagination header ── */}
+
+      {showControls && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-5 py-3">
+          <select
+            value={currentStatus ?? ""}
+            onChange={(e) => onStatusChange?.(e.target.value)}
+            className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            aria-label="Filter by status"
+          >
+            {statusOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+
+          {pagination && (
+            <div className="flex items-center gap-2 text-sm">
+              <span className="text-slate-500">
+                {pagination.total === 0
+                  ? "No results"
+                  : `${(pagination.page - 1) * pagination.limit + 1}–${Math.min(
+                    pagination.page * pagination.limit,
+                    pagination.total,
+                  )} of ${pagination.total}`}
+              </span>
+              <button
+                onClick={() => onPageChange?.(pagination.page - 1)}
+                disabled={!pagination.hasPrev}
+                className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Previous page"
+              >
+                ← Prev
+              </button>
+              <span className="min-w-[3rem] text-center text-xs font-semibold text-slate-600">
+                {pagination.page} / {pagination.totalPages}
+              </span>
+              <button
+                onClick={() => onPageChange?.(pagination.page + 1)}
+                disabled={!pagination.hasNext}
+                className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                aria-label="Next page"
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p className="p-5 text-sm text-slate-500">Loading...</p>
       ) : applications.length === 0 ? (
         <p className="p-5 text-sm text-slate-500">
-          No applications match this view.
+          {currentStatus
+            ? `No applications with status "${currentStatus}".`
+            : "No applications match this view."}
         </p>
       ) : (
         <div className="overflow-x-auto">
@@ -1005,102 +1579,191 @@ function ApplicationTable({ applications, loading, role, onStatus }: any) {
                       </p>
                     )}
                   </td>
-                  <td className="px-4 py-4 flex gap-3">
+                  <td className="px-4 py-4">
                     {role === "student" &&
                       ["Draft", "Correction Required"].includes(
                         item.status,
                       ) && (
-                        
-<button
-  onClick={async () => {
-    try {
-      const response = await applicationApi.submit(item._id);
-      console.log("Application submitted:", response.data);
-      alert(
-        item.status === "Correction Required"
-          ? "Application resubmitted successfully!"
-          : "Application submitted successfully!",
-      );
-      window.location.reload();
-    } catch (cause: any) {
-      const data = cause.response?.data;
-
-      console.error("Application submission failed:", data ?? cause.message);
-
-      const message = data?.missingTypes?.length
-        ? `Missing documents: ${data.missingTypes.join(", ")}`
-        : data?.reasons?.length
-          ? data.reasons.join("\n")
-          : data?.message ?? "Application submission failed.";
-
-      alert(message);
-    }
-  }}
-  className="cursor-pointer text-sm font-bold text-teal-700 hover:underline"
->
-                      {item.status === "Correction Required"
-                        ? "Resubmit Application"
-                        : "Submit"}
-</button>
-
-                      )}
-                
-    
-{role === "staff" && item.status === "Submitted" && (
-  <button
-    onClick={() =>
-      onStatus(item._id, "Under Department Verification")
-    }
-    className="cursor-pointer text-sm font-bold text-teal-700 hover:underline"
-  >
-    Verify
-  </button>
-)}
-
-                    
-{role === "staff" &&
-  ["Submitted", "Under Department Verification"].includes(item.status) && (
-    <button
-      onClick={() => onStatus(item._id, "Correction Required")}
-      className="cursor-pointer text-sm font-bold text-rose-700 hover:underline"
-    >
-      Correction Required
-    </button>
-  )}
-
-                    {role === "officer" &&
-                      item.status === "Under Department Verification" && (
                         <button
                           onClick={() =>
-                            onStatus(item._id, "Under Officer Verification")
+                            onSubmitApplication?.(item._id, item.status)
                           }
                           className="cursor-pointer text-sm font-bold text-teal-700 hover:underline"
                         >
-                          Review
+                          {item.status === "Correction Required"
+                            ? "Resubmit Application"
+                            : "Submit"}
                         </button>
                       )}
-                    {(role === "admin" || role === "director") &&
-                      [
-                        "Under Officer Verification",
-                        "Correction Required",
-                      ].includes(item.status) && (
-                        <>
-                          <button
-                            onClick={() => onStatus(item._id, "Approved")}
-                            className="cursor-pointer text-sm font-bold text-emerald-700 hover:underline"
-                          >
-                            Approve
-                          </button>
+
+                    {role === "staff" && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.status === "Submitted" && (
                           <button
                             onClick={() =>
-                              onStatus(item._id, "Correction Required")
+                              onStatus(
+                                item._id,
+                                "Under Department Verification",
+                              )
                             }
-                            className="cursor-pointer text-sm font-bold text-rose-700 hover:underline"
+                            className="cursor-pointer rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100"
                           >
-                            Correction
+                            Verify
                           </button>
-                        </>
-                      )}
+                        )}
+                        {["Submitted", "Under Department Verification"].includes(
+                          item.status,
+                        ) && (
+                            <button
+                              onClick={() =>
+                                onStatus(item._id, "Correction Required")
+                              }
+                              className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                            >
+                              Correction
+                            </button>
+                          )}
+                      </div>
+                    )}
+
+                    {role === "officer" && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.status === "Under Department Verification" && (
+                          <button
+                            onClick={() =>
+                              onStatus(item._id, "Under Officer Verification")
+                            }
+                            className="cursor-pointer rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100"
+                          >
+                            Recommend
+                          </button>
+                        )}
+                        {[
+                          "Under Department Verification",
+                          "Under Officer Verification",
+                        ].includes(item.status) && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  onStatus(item._id, "Correction Required")
+                                }
+                                className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                              >
+                                Correction
+                              </button>
+                              <button
+                                onClick={() =>
+                                  onStatus(item._id, "Rejected")
+                                }
+                                className="cursor-pointer rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                              >
+                                Reject
+                              </button>
+                            </>
+                          )}
+                      </div>
+                    )}
+
+                    {role === "director" && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.status === "Under Officer Verification" && (
+                          <>
+                            <button
+                              onClick={() =>
+                                onStatus(item._id, "Approved")
+                              }
+                              className="cursor-pointer rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() =>
+                                onStatus(item._id, "Correction Required")
+                              }
+                              className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                            >
+                              Correction
+                            </button>
+                            <button
+                              onClick={() =>
+                                onStatus(item._id, "Rejected")
+                              }
+                              className="cursor-pointer rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {role === "admin" && (
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          "Submitted",
+                          "Under Department Verification",
+                          "Under Officer Verification",
+                          "Correction Required",
+                        ].includes(item.status) && (
+                            <>
+                              <button
+                                onClick={() =>
+                                  onStatus(item._id, "Approved")
+                                }
+                                className="cursor-pointer rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                              >
+                                Approve
+                              </button>
+                              <button
+                                onClick={() =>
+                                  onStatus(item._id, "Rejected")
+                                }
+                                className="cursor-pointer rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                              >
+                                Reject
+                              </button>
+                              {item.status !== "Correction Required" && (
+                                <button
+                                  onClick={() =>
+                                    onStatus(item._id, "Correction Required")
+                                  }
+                                  className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                                >
+                                  Correction
+                                </button>
+                              )}
+                              {item.status !==
+                                "Under Department Verification" && (
+                                  <button
+                                    onClick={() =>
+                                      onStatus(
+                                        item._id,
+                                        "Under Department Verification",
+                                      )
+                                    }
+                                    className="cursor-pointer rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100"
+                                  >
+                                    To Dept
+                                  </button>
+                                )}
+                              {item.status !==
+                                "Under Officer Verification" && (
+                                  <button
+                                    onClick={() =>
+                                      onStatus(
+                                        item._id,
+                                        "Under Officer Verification",
+                                      )
+                                    }
+                                    className="cursor-pointer rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100"
+                                  >
+                                    To Officer
+                                  </button>
+                                )}
+                            </>
+                          )}
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -1108,9 +1771,33 @@ function ApplicationTable({ applications, loading, role, onStatus }: any) {
           </table>
         </div>
       )}
+
+      {/* ── Bottom pagination footer ── */}
+      {showControls && pagination && pagination.totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3">
+          <button
+            onClick={() => onPageChange?.(pagination.page - 1)}
+            disabled={!pagination.hasPrev}
+            className="cursor-pointer rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            ← Previous
+          </button>
+          <span className="text-xs text-slate-500">
+            Page {pagination.page} of {pagination.totalPages}
+          </span>
+          <button
+            onClick={() => onPageChange?.(pagination.page + 1)}
+            disabled={!pagination.hasNext}
+            className="cursor-pointer rounded-lg border border-slate-200 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </Panel>
   );
 }
+
 function ScholarshipList({
   scholarships,
   applications,
@@ -1185,8 +1872,8 @@ function NavIcon({ item }: { item: string }) {
   const Icon = item.includes("Scholar")
     ? BookOpen
     : item.includes("application") ||
-        item.includes("queue") ||
-        item.includes("decision")
+      item.includes("queue") ||
+      item.includes("decision")
       ? FileCheck2
       : item.includes("Document")
         ? FileText

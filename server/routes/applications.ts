@@ -15,18 +15,70 @@ router.use(requireAuth);
 const transitions: Record<string, string[]> = {
   staff: ["Under Department Verification", "Correction Required"],
   officer: ["Under Officer Verification", "Correction Required", "Rejected"],
-  director: ["Approved", "Rejected"],
-  admin: ["Approved", "Rejected", "Correction Required"],
+  director: ["Approved", "Rejected", "Correction Required"],
+  admin: [
+    "Approved",
+    "Rejected",
+    "Correction Required",
+    "Under Officer Verification",
+    "Under Department Verification",
+  ],
 };
+const PAGE_SIZE_MAX = 50;
+const PAGE_SIZE_DEFAULT = 20;
+const VALID_STATUSES = new Set([
+  "Draft",
+  "Submitted",
+  "Under Department Verification",
+  "Under Officer Verification",
+  "Correction Required",
+  "Approved",
+  "Rejected",
+]);
+
 router.get("/", async (req: AuthRequest, res, next) => {
   try {
-    const filter =
+    // ── Parse & validate pagination params ──────────────────────────────────
+    const rawPage = parseInt(String(req.query.page ?? "1"), 10);
+    const rawLimit = parseInt(String(req.query.limit ?? PAGE_SIZE_DEFAULT), 10);
+    const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0
+      ? Math.min(rawLimit, PAGE_SIZE_MAX)
+      : PAGE_SIZE_DEFAULT;
+    const skip = (page - 1) * limit;
+
+    // ── Build filter ─────────────────────────────────────────────────────────
+    const filter: Record<string, unknown> =
       req.user!.role === "student" ? { student: req.user!._id } : {};
-    res.json(
-      await Application.find(filter)
+
+    const rawStatus = String(req.query.status ?? "").trim();
+    if (rawStatus && VALID_STATUSES.has(rawStatus)) {
+      filter.status = rawStatus;
+    }
+
+    // ── Query in parallel: records + count ───────────────────────────────────
+    const [applications, total] = await Promise.all([
+      Application.find(filter)
         .populate("scholarship student verifications.actor")
-        .sort({ createdAt: -1 }),
-    );
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Application.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.max(1, Math.ceil(total / limit));
+
+    res.json({
+      applications,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -204,67 +256,64 @@ router.patch(
 
 const required = scholarship.requiredDocuments ?? [];
 
+      const normalizeDocumentType = (type: string) =>
+        String(type ?? "")
+          .toLowerCase()
+          .trim()
+          .replace(/[\s_-]+/g, "");
 
-const matchingDocuments = await Document.find({
-  owner: req.user!._id,
-  type: { $in: required },
-})
-  .select("_id type")
-  .lean();
+      const ownedDocuments = await Document.find({
+        owner: req.user!._id,
+      })
+        .select("_id type originalName")
+        .lean();
 
+      const existingIds = (application.documents ?? []).map((doc: any) => {
+        if (typeof doc === "string") return doc;
+        if (doc && typeof doc === "object" && doc._id) {
+          return String(doc._id);
+        }
+        return String(doc);
+      });
 
-// Existing attachment logic yahan rehne do
-      
-const existingIds = (application.documents ?? []).map((doc: any) => {
-  if (typeof doc === "string") return doc;
-
-  if (doc && typeof doc === "object" && doc._id) {
-    return String(doc._id);
-  }
-
-  return String(doc);
-});
-
+      const matchingDocIds: string[] = [];
+      for (const reqType of required) {
+        const normReq = normalizeDocumentType(reqType);
+        const matched = ownedDocuments.find(
+          (doc: any) => normalizeDocumentType(doc.type) === normReq,
+        );
+        if (matched) {
+          matchingDocIds.push(String(matched._id));
+        }
+      }
 
       const allDocumentIds = [
-        ...new Set([
-          ...existingIds,
-          ...matchingDocuments.map((doc: any) => String(doc._id)),
-        ]),
+        ...new Set([...existingIds, ...matchingDocIds]),
       ];
 
       application.documents = allDocumentIds as any;
 
+      const attachedDocs = ownedDocuments.filter((doc: any) =>
+        allDocumentIds.includes(String(doc._id)),
+      );
 
-      
-const ownedDocuments = await Document.find({
-  _id: { $in: allDocumentIds },
-  owner: req.user!._id,
-}).select("_id type");
+      const attachedTypes = new Set(
+        attachedDocs.map((doc: any) => normalizeDocumentType(doc.type)),
+      );
 
-const normalizeDocumentType = (type: string) =>
-  type.toLowerCase().trim().replace(/[\s_-]+/g, "");
+      const missingTypes = required.filter(
+        (type: string) => !attachedTypes.has(normalizeDocumentType(type)),
+      );
 
-const attachedTypes = new Set(
-  ownedDocuments.map((doc: any) =>
-    normalizeDocumentType(doc.type),
-  ),
-);
-
-const missingTypes = required.filter(
-  (type: string) =>
-    !attachedTypes.has(normalizeDocumentType(type)),
-);
-
-if (missingTypes.length > 0) {
-  return res.status(400).json({
-    message:
-      "Attach all required scholarship documents before submitting.",
-    missingTypes,
-    requiredTypes: required,
-    attachedTypes: ownedDocuments.map((doc: any) => doc.type),
-  });
-}
+      if (missingTypes.length > 0) {
+        return res.status(400).json({
+          message:
+            "Attach all required scholarship documents before submitting.",
+          missingTypes,
+          requiredTypes: required,
+          attachedTypes: attachedDocs.map((doc: any) => doc.type),
+        });
+      }
 
 
 application.status = "Submitted";
@@ -313,11 +362,22 @@ router.patch(
           ? ["Submitted", "Under Department Verification"]
           : req.user!.role === "officer"
             ? ["Under Department Verification", "Under Officer Verification"]
-            : ["Under Officer Verification", "Correction Required"];
+            : req.user!.role === "director"
+              ? ["Under Officer Verification"]
+              : [
+                  "Submitted",
+                  "Under Department Verification",
+                  "Under Officer Verification",
+                  "Correction Required",
+                ];
       const remarks = String(req.body.remarks ?? "").trim();
       if (nextStatus === "Correction Required" && !remarks)
         return res.status(400).json({
           message: "A correction reason or remark is required.",
+        });
+      if (nextStatus === "Rejected" && !remarks)
+        return res.status(400).json({
+          message: "A rejection reason or remark is required.",
         });
       if (!validCurrent.includes(application.status))
         return res
@@ -346,16 +406,19 @@ router.patch(
       });
       await AuditLog.create({
         actor: req.user!._id,
-        action: "STATUS_UPDATED",
+        action:
+          req.user!.role === "admin"
+            ? "ADMIN_STATUS_OVERRIDE"
+            : "STATUS_UPDATED",
         entity: "Application",
         entityId: application.id,
         remarks: application.remarks,
       });
       res.json(application);
     } catch (error) {
-        console.error("APPLICATION SUBMIT FAILED:", error);
+      console.error("APPLICATION STATUS UPDATE FAILED:", error);
       next(error);
-}
+    }
 
   },
 );
