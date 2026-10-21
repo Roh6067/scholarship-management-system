@@ -668,78 +668,123 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     .filter((item) => item.value > 0);
 
 
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-background text-foreground">
+      {open && (
+        <button
+          aria-label="Close navigation overlay"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
+        />
+      )}
       <aside
-        className={`fixed inset-y-0 left-0 z-20 flex w-64 flex-col bg-[#193b61] text-white transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-[min(86vw,280px)] flex-col bg-[#0F172A] text-white shadow-2xl transition-transform duration-200 lg:w-72 lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
+        <div className="flex h-[84px] items-center justify-between border-b border-white/10 px-5">
           <Brand light />
           <button
             onClick={() => setOpen(false)}
-            className="cursor-pointer rounded-lg p-2 hover:bg-white/10 lg:hidden"
+            className="cursor-pointer rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Close navigation"
           >
-            <X />
+            <X className="size-5" />
           </button>
         </div>
-        <div className="border-b border-white/10 px-6 py-5">
-          <p className="truncate text-sm font-bold">{user.name}</p>
-          <p className="mt-1 text-xs text-blue-100/70">{labels[user.role]}</p>
+        <div className="mx-4 mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
+              {user.name.slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+              <p className="mt-0.5 truncate text-xs text-slate-400">{labels[user.role]}</p>
+            </div>
+          </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-5">
+        <div className="px-5 pb-2 pt-7 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+          Workspace
+        </div>
+        <nav aria-label={`${labels[user.role]} navigation`} className="flex flex-1 flex-col gap-1 px-3">
           {navByRole[user.role].map((item) => (
             <button
               key={item}
+              type="button"
+              aria-current={active === item ? "page" : undefined}
               onClick={() => {
                 setActive(item);
                 setOpen(false);
               }}
-              className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold ${active === item ? "bg-white/15" : "text-blue-100/70 hover:bg-white/10 hover:text-white"}`}
+              className={`group relative flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${active === item ? "bg-teal-600 text-white shadow-lg shadow-teal-950/20" : "text-slate-400 hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"}`}
             >
+              {active === item && <span className="absolute -left-3 h-7 w-1 rounded-r-full bg-teal-300" />}
               <NavIcon item={item} />
-              {item}
-              {item === "Notifications" &&
-                notifications.some((n) => !n.read) && (
-                  <span className="ml-auto rounded-full bg-rose-400 px-2 py-0.5 text-[10px]">
-                    {notifications.filter((n) => !n.read).length}
-                  </span>
-                )}
+              <span className="truncate">{item}</span>
+              {item === "Notifications" && unreadCount > 0 && (
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active === item ? "bg-white/20 text-white" : "bg-rose-400 text-white"}`}>
+                  {unreadCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>
-        <button
-          onClick={signOut}
-          className="m-4 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-blue-100/70 hover:bg-white/10 hover:text-white"
-        >
-          <LogOut />
-          Sign out
-        </button>
+        <div className="border-t border-white/10 p-3">
+          <button
+            onClick={signOut}
+            className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"
+          >
+            <LogOut className="size-5" />
+            Sign out
+          </button>
+        </div>
       </aside>
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8">
-          <div className="flex items-center gap-4">
+      <div className="lg:pl-72">
+        <header className="sticky top-0 z-20 flex min-h-[84px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-8">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
             <button
               onClick={() => setOpen(true)}
-              className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+              className="cursor-pointer rounded-xl border border-slate-200 p-2.5 text-slate-600 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 lg:hidden"
               aria-label="Open navigation"
+              aria-expanded={open}
             >
-              <Menu />
+              <Menu className="size-5" />
             </button>
-            <div>
-              <p className="text-sm font-semibold text-teal-700">
-                {labels[user.role]} workspace
-              </p>
-              <h1 className="text-2xl font-bold text-[#193b61]">{active}</h1>
+            <div className="min-w-0">
+              <div className="mb-1 hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
+                <span>ScholarFlow</span>
+                <span aria-hidden="true">/</span>
+                <span>{labels[user.role]}</span>
+                <span aria-hidden="true">/</span>
+                <span className="text-slate-600">{active}</span>
+              </div>
+              <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{active}</h1>
             </div>
           </div>
-          <button
-            onClick={() => loadData()}
-            className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-            aria-label="Refresh data"
-          >
-            <RefreshCw />
-          </button>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="mr-1 hidden h-8 w-px bg-slate-200 sm:block" />
+            <button
+              onClick={() => setActive("Notifications")}
+              className="relative cursor-pointer rounded-xl p-2.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:bg-teal-50"
+              aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
+            >
+              <Bell className="size-5" />
+              {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />}
+            </button>
+            <button
+              onClick={() => loadData()}
+              className="cursor-pointer rounded-xl p-2.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:bg-teal-50"
+              aria-label="Refresh data"
+            >
+              <RefreshCw className="size-5" />
+            </button>
+            <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
+              <span className="flex size-9 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">{user.name.slice(0, 1).toUpperCase()}</span>
+              <div className="hidden lg:block">
+                <p className="max-w-32 truncate text-sm font-semibold text-slate-800">{user.name}</p>
+                <p className="text-xs text-slate-500">{labels[user.role]}</p>
+              </div>
+            </div>
+          </div>
         </header>
         <main className="mx-auto max-w-7xl space-y-6 p-5 sm:p-8">
           {error && (
