@@ -5,6 +5,8 @@ import {
   BookOpen,
   CheckCircle2,
   ClipboardCheck,
+  Eye,
+  EyeOff,
   FileCheck2,
   FileText,
   GraduationCap,
@@ -152,6 +154,39 @@ const navByRole: Record<Role, string[]> = {
   ],
 };
 
+const pageTitles: Record<string, string> = {
+  Overview: "Dashboard",
+  "My applications": "My Applications",
+  Scholarships: "Scholarships",
+  Documents: "Documents",
+  "My profile": "My Profile",
+  Notifications: "Notifications",
+  "Verification queue": "Verification Queue",
+  "Correction requests": "Correction Requests",
+  "Review queue": "Review Queue",
+  Recommendations: "Recommendations",
+  "Final decisions": "Final Decisions",
+  Reports: "Reports",
+  "User management": "User Management",
+  Applications: "Applications",
+  "Audit logs": "Audit Logs",
+};
+
+const statusBadgeClasses: Record<string, string> = {
+  Draft: "border-slate-200 bg-slate-100 text-slate-700",
+  Submitted: "border-blue-200 bg-blue-50 text-blue-800",
+  "Under Department Verification": "border-violet-200 bg-violet-50 text-violet-800",
+  "Under Officer Verification": "border-indigo-200 bg-indigo-50 text-indigo-800",
+  "Correction Required": "border-amber-200 bg-amber-50 text-amber-900",
+  Approved: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  Rejected: "border-rose-200 bg-rose-50 text-rose-800",
+};
+
+function readablePageTitle(role: Role, active: string) {
+  const title = pageTitles[active] ?? active;
+  return active === "Overview" ? `${labels[role]} Dashboard` : title;
+}
+
 export default function RealRolePortal() {
   const [user, setUser] = useState<User | null>(null),
     [checking, setChecking] = useState(true),
@@ -164,7 +199,8 @@ export default function RealRolePortal() {
       password: "",
     }),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     authApi
       .me()
@@ -199,6 +235,7 @@ export default function RealRolePortal() {
     event.preventDefault();
     setError("");
     setNotice("");
+    setSubmitting(true);
     try {
       const response =
         mode === "register"
@@ -216,6 +253,8 @@ export default function RealRolePortal() {
       setError(
         cause.response?.data?.message ?? "Unable to complete the request.",
       );
+    } finally {
+      setSubmitting(false);
     }
   }
   async function signOut() {
@@ -242,6 +281,7 @@ export default function RealRolePortal() {
         setForm={setForm}
         error={error}
         notice={notice}
+        submitting={submitting}
         submit={submit}
       />
     );
@@ -257,11 +297,13 @@ function Login({
   setForm,
   error,
   notice,
+  submitting,
   submit,
 }: any) {
+  const [showPassword, setShowPassword] = useState(false);
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-900">
-      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 lg:grid-cols-[1fr_440px]">
+    <main className="min-h-screen overflow-x-hidden bg-[#F8FAFC] px-4 py-6 text-[#0F172A] sm:px-6 sm:py-10">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl items-center gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1fr_440px] lg:gap-12">
         <section className="hidden lg:block">
           <Brand />
           <h1 className="mt-10 max-w-xl text-5xl font-bold leading-tight tracking-tight text-[#193b61]">
@@ -272,7 +314,7 @@ function Login({
             administrators.
           </p>
         </section>
-        <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xl sm:p-9">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-card)] sm:p-9">
           <div className="lg:hidden">
             <Brand />
           </div>
@@ -318,48 +360,73 @@ function Login({
               </label>
             )}
             {mode === "register" && (
-              <input
+              <label className="text-sm font-semibold text-slate-700">
+                Full name
+                <input
+                id="full-name"
                 required
+                autoComplete="name"
                 placeholder="Full name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="rounded-xl border border-slate-200 px-3 py-3"
-              />
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+                />
+              </label>
             )}
             {mode === "register" && (
-              <input
+              <label className="text-sm font-semibold text-slate-700">
+                Student ID <span className="font-normal text-slate-400">(optional)</span>
+                <input
+                id="student-id"
                 placeholder="Student ID (optional)"
                 value={form.studentId}
                 onChange={(e) =>
                   setForm({ ...form, studentId: e.target.value })
                 }
-                className="rounded-xl border border-slate-200 px-3 py-3"
-              />
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+                />
+              </label>
             )}
+            <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+              Email address
             <input
+              id="email"
+              autoComplete="email"
               required
               type="email"
               placeholder="Email address"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="rounded-xl border border-slate-200 px-3 py-3"
+              className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
             />
+            </label>
+            <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+              Password
+              <span className="relative mt-2 block">
             <input
+              id="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               required
               minLength={8}
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="rounded-xl border border-slate-200 px-3 py-3"
+              className="min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 pr-12 font-normal"
             />
-            <button className="cursor-pointer rounded-xl bg-[#193b61] px-4 py-3 font-bold text-white hover:bg-[#102d4b]">
-              {mode === "login" ? "Sign in securely" : "Create student account"}
+            <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={showPassword ? "Hide password" : "Show password"}>
+              {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+              </span>
+            </label>
+            <button disabled={submitting} className="min-h-12 cursor-pointer rounded-xl bg-[#0D9488] px-4 py-3 font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? "Securing your session…" : mode === "login" ? "Sign in securely" : "Create student account"}
             </button>
           </form>
           <button
             onClick={() => setMode(mode === "login" ? "register" : "login")}
-            className="mt-5 cursor-pointer text-sm font-bold text-teal-700 hover:underline"
+            type="button"
+            className="mt-5 min-h-11 cursor-pointer text-left text-sm font-bold text-teal-700 hover:underline"
           >
             {mode === "login"
               ? "New student? Create an account"
@@ -611,42 +678,42 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
   // tab which shows only the first 5 records as a summary.
   const filtered = useMemo(() => applications, [applications]);
 
-  const cards = isStudent
+  const cards: StatCardData[] = isStudent
     ? [
-      ["My applications", applications.length],
-      ["Drafts", stats.drafts ?? 0],
-      ["Awaiting verification", stats.awaitingVerification ?? 0],
-      ["Approved", stats.approved ?? 0],
-      ["Correction requests", stats.correctionRequired ?? 0],
-      ["Available scholarships", stats.scholarships ?? scholarships.length],
-    ]
+        { title: "My applications", value: applications.length, detail: "All saved and submitted applications", icon: FileText, tone: "teal" },
+        { title: "Drafts", value: stats.drafts ?? 0, detail: "Applications still in progress", icon: FileCheck2, tone: "slate" },
+        { title: "Awaiting verification", value: stats.awaitingVerification ?? 0, detail: "Submitted for review", icon: ClipboardCheck, tone: "blue" },
+        { title: "Approved", value: stats.approved ?? 0, detail: "Applications approved", icon: CheckCircle2, tone: "green" },
+        { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Need your attention", icon: RefreshCw, tone: "amber" },
+        { title: "Available scholarships", value: stats.scholarships ?? scholarships.length, detail: "Open opportunities", icon: GraduationCap, tone: "indigo" },
+      ]
     : user.role === "staff"
       ? [
-        ["Total applications", stats.totalApplications ?? applications.length],
-        ["New submissions", stats.byStatus?.Submitted ?? 0],
-        ["Department verification", stats.byStatus?.["Under Department Verification"] ?? 0],
-        ["Correction requests", stats.correctionRequired ?? 0],
-      ]
+          { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "Across all scholarship cycles", icon: FileText, tone: "teal" },
+          { title: "New submissions", value: stats.byStatus?.Submitted ?? 0, detail: "Ready for department review", icon: ClipboardCheck, tone: "blue" },
+          { title: "Department verification", value: stats.byStatus?.["Under Department Verification"] ?? 0, detail: "Currently in your queue", icon: FileCheck2, tone: "violet" },
+          { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Applications needing updates", icon: RefreshCw, tone: "amber" },
+        ]
       : user.role === "officer"
         ? [
-          ["Total applications", stats.totalApplications ?? applications.length],
-          ["Awaiting verification", stats.byStatus?.["Under Department Verification"] ?? 0],
-          ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
-          ["Correction requests", stats.correctionRequired ?? 0],
-        ]
+            { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "All submitted applications", icon: FileText, tone: "teal" },
+            { title: "Awaiting verification", value: stats.byStatus?.["Under Department Verification"] ?? 0, detail: "Pending department handoff", icon: ClipboardCheck, tone: "blue" },
+            { title: "Awaiting final decision", value: stats.byStatus?.["Under Officer Verification"] ?? 0, detail: "Ready for officer review", icon: FileCheck2, tone: "violet" },
+            { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Returned to applicants", icon: RefreshCw, tone: "amber" },
+          ]
         : user.role === "director"
           ? [
-            ["Total applications", stats.totalApplications ?? applications.length],
-            ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
-            ["Approved", stats.approved ?? 0],
-            ["Rejected", stats.rejected ?? 0],
-          ]
+              { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "Current application volume", icon: FileText, tone: "teal" },
+              { title: "Awaiting final decision", value: stats.byStatus?.["Under Officer Verification"] ?? 0, detail: "Pending your decision", icon: ClipboardCheck, tone: "blue" },
+              { title: "Approved", value: stats.approved ?? 0, detail: "Successful decisions", icon: CheckCircle2, tone: "green" },
+              { title: "Rejected", value: stats.rejected ?? 0, detail: "Decisions not approved", icon: X, tone: "rose" },
+            ]
           : [
-            ["Total applications", stats.totalApplications ?? applications.length],
-            ["Pending review", stats.pending ?? 0],
-            ["Approved", stats.approved ?? 0],
-            ["Rejected", stats.rejected ?? 0],
-          ];
+              { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "System-wide applications", icon: FileText, tone: "teal" },
+              { title: "Pending review", value: stats.pending ?? 0, detail: "Across active queues", icon: ClipboardCheck, tone: "blue" },
+              { title: "Approved", value: stats.approved ?? 0, detail: "Approved applications", icon: CheckCircle2, tone: "green" },
+              { title: "Rejected", value: stats.rejected ?? 0, detail: "Rejected applications", icon: X, tone: "rose" },
+            ];
 
 
 
@@ -668,78 +735,118 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     .filter((item) => item.value > 0);
 
 
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
+    <div className="min-h-screen bg-background text-foreground">
+      {open && (
+        <button
+          aria-label="Close navigation overlay"
+          onClick={() => setOpen(false)}
+          className="fixed inset-0 z-30 bg-slate-950/45 backdrop-blur-[2px] lg:hidden"
+        />
+      )}
       <aside
-        className={`fixed inset-y-0 left-0 z-20 flex w-64 flex-col bg-[#193b61] text-white transition-transform lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+        className={`fixed inset-y-0 left-0 z-40 flex w-[min(86vw,280px)] flex-col bg-[#0F172A] text-white shadow-2xl transition-transform duration-200 lg:w-72 lg:translate-x-0 lg:shadow-none ${open ? "translate-x-0" : "-translate-x-full"}`}
       >
-        <div className="flex h-20 items-center justify-between border-b border-white/10 px-6">
+        <div className="flex h-[84px] items-center justify-between border-b border-white/10 px-5">
           <Brand light />
           <button
             onClick={() => setOpen(false)}
-            className="cursor-pointer rounded-lg p-2 hover:bg-white/10 lg:hidden"
+            className="cursor-pointer rounded-lg p-2 text-slate-400 transition hover:bg-white/10 hover:text-white lg:hidden"
             aria-label="Close navigation"
           >
-            <X />
+            <X className="size-5" />
           </button>
         </div>
-        <div className="border-b border-white/10 px-6 py-5">
-          <p className="truncate text-sm font-bold">{user.name}</p>
-          <p className="mt-1 text-xs text-blue-100/70">{labels[user.role]}</p>
+        <div className="mx-4 mt-5 rounded-xl border border-white/10 bg-white/[0.04] p-3">
+          <div className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-teal-600 text-sm font-bold text-white">
+              {user.name.slice(0, 1).toUpperCase()}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
+              <p className="mt-0.5 truncate text-xs text-slate-400">{labels[user.role]}</p>
+            </div>
+          </div>
         </div>
-        <nav className="flex flex-1 flex-col gap-1 px-3 py-5">
+        <div className="px-5 pb-2 pt-7 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
+          Workspace
+        </div>
+        <nav aria-label={`${labels[user.role]} navigation`} className="flex flex-1 flex-col gap-1 px-3">
           {navByRole[user.role].map((item) => (
             <button
               key={item}
+              type="button"
+              aria-current={active === item ? "page" : undefined}
               onClick={() => {
                 setActive(item);
                 setOpen(false);
               }}
-              className={`flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold ${active === item ? "bg-white/15" : "text-blue-100/70 hover:bg-white/10 hover:text-white"}`}
+              className={`group relative flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${active === item ? "bg-teal-600 text-white shadow-lg shadow-teal-950/20" : "text-slate-400 hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"}`}
             >
+              {active === item && <span className="absolute -left-3 h-7 w-1 rounded-r-full bg-teal-300" />}
               <NavIcon item={item} />
-              {item}
-              {item === "Notifications" &&
-                notifications.some((n) => !n.read) && (
-                  <span className="ml-auto rounded-full bg-rose-400 px-2 py-0.5 text-[10px]">
-                    {notifications.filter((n) => !n.read).length}
-                  </span>
-                )}
+              <span className="truncate">{item}</span>
+              {item === "Notifications" && unreadCount > 0 && (
+                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active === item ? "bg-white/20 text-white" : "bg-rose-400 text-white"}`}>
+                  {unreadCount}
+                </span>
+              )}
             </button>
           ))}
         </nav>
-        <button
-          onClick={signOut}
-          className="m-4 flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-blue-100/70 hover:bg-white/10 hover:text-white"
-        >
-          <LogOut />
-          Sign out
-        </button>
+        <div className="border-t border-white/10 p-3">
+          <button
+            onClick={signOut}
+            className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"
+          >
+            <LogOut className="size-5" />
+            Sign out
+          </button>
+        </div>
       </aside>
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-10 flex h-20 items-center justify-between border-b border-slate-200 bg-white/95 px-5 backdrop-blur sm:px-8">
-          <div className="flex items-center gap-4">
+      <div className="lg:pl-72">
+        <header className="sticky top-0 z-20 flex min-h-[84px] items-center justify-between border-b border-slate-200/80 bg-white/95 px-4 backdrop-blur sm:px-8">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-5">
             <button
               onClick={() => setOpen(true)}
-              className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden"
+              className="cursor-pointer rounded-xl border border-slate-200 p-2.5 text-slate-600 transition hover:border-teal-200 hover:bg-teal-50 hover:text-teal-700 lg:hidden"
               aria-label="Open navigation"
+              aria-expanded={open}
             >
-              <Menu />
+              <Menu className="size-5" />
             </button>
-            <div>
-              <p className="text-sm font-semibold text-teal-700">
-                {labels[user.role]} workspace
-              </p>
-              <h1 className="text-2xl font-bold text-[#193b61]">{active}</h1>
+            <div className="min-w-0">
+              <div className="mb-1 hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
+                <span>ScholarFlow</span>
+                <span aria-hidden="true">/</span>
+                <span>{labels[user.role]}</span>
+                <span aria-hidden="true">/</span>
+                <span className="text-slate-600">{pageTitles[active] ?? active}</span>
+              </div>
+              <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{readablePageTitle(user.role, active)}</h1>
             </div>
           </div>
-          <button
-            onClick={() => loadData()}
-            className="cursor-pointer rounded-lg p-2 text-slate-500 hover:bg-slate-100"
-            aria-label="Refresh data"
-          >
-            <RefreshCw />
-          </button>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <div className="mr-1 hidden h-8 w-px bg-slate-200 sm:block" />
+            <button
+              onClick={() => setActive("Notifications")}
+              className="relative cursor-pointer rounded-xl p-2.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:bg-teal-50"
+              aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
+            >
+              <Bell className="size-5" />
+              {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />}
+            </button>
+            
+          
+            <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
+              <span className="flex size-9 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">{user.name.slice(0, 1).toUpperCase()}</span>
+              <div className="hidden lg:block">
+                <p className="max-w-32 truncate text-sm font-semibold text-slate-800">{user.name}</p>
+                <p className="text-xs text-slate-500">{labels[user.role]}</p>
+              </div>
+            </div>
+          </div>
         </header>
         <main className="mx-auto max-w-7xl space-y-6 p-5 sm:p-8">
           {error && (
@@ -760,27 +867,28 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
           )}
           {active === "Overview" && (
             <>
-              <div>
-                <p className="text-3xl font-bold text-[#193b61]">
-                  Good to see you, {user.name.split(" ")[0]}.
-                </p>
-                <p className="mt-1 text-slate-500">
-                  Your scholarship activity is synced with the secure backend.
-                </p>
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold text-teal-700">{labels[user.role]} workspace</p>
+                  <h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                    Good to see you, {user.name.split(" ")[0]}.
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+                    Here is the latest view of your scholarship activity and work queue.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadData()}
+                  className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:text-teal-700"
+                >
+                  <RefreshCw className="size-4" />
+                  Refresh data
+                </button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {cards.map(([title, value]) => (
-                  <div
-                    key={title}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                  >
-                    <p className="text-sm font-semibold text-slate-500">
-                      {title}
-                    </p>
-                    <p className="mt-3 text-3xl font-bold text-[#193b61]">
-                      {loading ? "—" : value}
-                    </p>
-                  </div>
+                {cards.map((card) => (
+                  <StatCard key={card.title} card={card} loading={loading} />
                 ))}
               </div>
 
@@ -1547,7 +1655,7 @@ function ApplicationTable({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left text-sm">
+          <table className="w-full min-w-[680px] text-left text-sm text-slate-800">
             <thead className="border-b text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3">Application</th>
@@ -1570,7 +1678,7 @@ function ApplicationTable({
                     {item.scholarship?.name || "Scholarship"}
                   </td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">
+                    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusBadgeClasses[item.status] ?? "border-slate-200 bg-slate-100 text-slate-700"}`}>
                       {item.status}
                     </span>
                     {item.remarks && (
@@ -1857,9 +1965,52 @@ function ScholarshipList({
     </Panel>
   );
 }
+type StatTone = "teal" | "slate" | "blue" | "green" | "amber" | "indigo" | "violet" | "rose";
+type StatCardData = {
+  title: string;
+  value: number;
+  detail: string;
+  icon: typeof FileText;
+  tone: StatTone;
+};
+
+const statToneClasses: Record<StatTone, { icon: string; value: string }> = {
+  teal: { icon: "bg-teal-50 text-teal-700", value: "text-teal-700" },
+  slate: { icon: "bg-slate-100 text-slate-700", value: "text-slate-800" },
+  blue: { icon: "bg-blue-50 text-blue-700", value: "text-blue-700" },
+  green: { icon: "bg-emerald-50 text-emerald-700", value: "text-emerald-700" },
+  amber: { icon: "bg-amber-50 text-amber-700", value: "text-amber-700" },
+  indigo: { icon: "bg-indigo-50 text-indigo-700", value: "text-indigo-700" },
+  violet: { icon: "bg-violet-50 text-violet-700", value: "text-violet-700" },
+  rose: { icon: "bg-rose-50 text-rose-700", value: "text-rose-700" },
+};
+
+function StatCard({ card, loading }: { card: StatCardData; loading: boolean }) {
+  const Icon = card.icon;
+  const tone = statToneClasses[card.tone];
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-500">{card.title}</p>
+          <p className={`mt-3 text-3xl font-bold tracking-tight ${tone.value}`}>
+            {loading ? "—" : card.value}
+          </p>
+        </div>
+        <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}>
+          <Icon className="size-5" />
+        </span>
+      </div>
+      <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-medium text-slate-500">
+        {card.detail}
+      </p>
+    </article>
+  );
+}
+
 function Panel({ title, subtitle, children }: any) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
         <h2 className="font-bold text-[#193b61]">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
