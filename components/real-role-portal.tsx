@@ -644,42 +644,42 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
   // tab which shows only the first 5 records as a summary.
   const filtered = useMemo(() => applications, [applications]);
 
-  const cards = isStudent
+  const cards: StatCardData[] = isStudent
     ? [
-      ["My applications", applications.length],
-      ["Drafts", stats.drafts ?? 0],
-      ["Awaiting verification", stats.awaitingVerification ?? 0],
-      ["Approved", stats.approved ?? 0],
-      ["Correction requests", stats.correctionRequired ?? 0],
-      ["Available scholarships", stats.scholarships ?? scholarships.length],
-    ]
+        { title: "My applications", value: applications.length, detail: "All saved and submitted applications", icon: FileText, tone: "teal" },
+        { title: "Drafts", value: stats.drafts ?? 0, detail: "Applications still in progress", icon: FileCheck2, tone: "slate" },
+        { title: "Awaiting verification", value: stats.awaitingVerification ?? 0, detail: "Submitted for review", icon: ClipboardCheck, tone: "blue" },
+        { title: "Approved", value: stats.approved ?? 0, detail: "Applications approved", icon: CheckCircle2, tone: "green" },
+        { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Need your attention", icon: RefreshCw, tone: "amber" },
+        { title: "Available scholarships", value: stats.scholarships ?? scholarships.length, detail: "Open opportunities", icon: GraduationCap, tone: "indigo" },
+      ]
     : user.role === "staff"
       ? [
-        ["Total applications", stats.totalApplications ?? applications.length],
-        ["New submissions", stats.byStatus?.Submitted ?? 0],
-        ["Department verification", stats.byStatus?.["Under Department Verification"] ?? 0],
-        ["Correction requests", stats.correctionRequired ?? 0],
-      ]
+          { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "Across all scholarship cycles", icon: FileText, tone: "teal" },
+          { title: "New submissions", value: stats.byStatus?.Submitted ?? 0, detail: "Ready for department review", icon: ClipboardCheck, tone: "blue" },
+          { title: "Department verification", value: stats.byStatus?.["Under Department Verification"] ?? 0, detail: "Currently in your queue", icon: FileCheck2, tone: "violet" },
+          { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Applications needing updates", icon: RefreshCw, tone: "amber" },
+        ]
       : user.role === "officer"
         ? [
-          ["Total applications", stats.totalApplications ?? applications.length],
-          ["Awaiting verification", stats.byStatus?.["Under Department Verification"] ?? 0],
-          ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
-          ["Correction requests", stats.correctionRequired ?? 0],
-        ]
+            { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "All submitted applications", icon: FileText, tone: "teal" },
+            { title: "Awaiting verification", value: stats.byStatus?.["Under Department Verification"] ?? 0, detail: "Pending department handoff", icon: ClipboardCheck, tone: "blue" },
+            { title: "Awaiting final decision", value: stats.byStatus?.["Under Officer Verification"] ?? 0, detail: "Ready for officer review", icon: FileCheck2, tone: "violet" },
+            { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Returned to applicants", icon: RefreshCw, tone: "amber" },
+          ]
         : user.role === "director"
           ? [
-            ["Total applications", stats.totalApplications ?? applications.length],
-            ["Awaiting final decision", stats.byStatus?.["Under Officer Verification"] ?? 0],
-            ["Approved", stats.approved ?? 0],
-            ["Rejected", stats.rejected ?? 0],
-          ]
+              { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "Current application volume", icon: FileText, tone: "teal" },
+              { title: "Awaiting final decision", value: stats.byStatus?.["Under Officer Verification"] ?? 0, detail: "Pending your decision", icon: ClipboardCheck, tone: "blue" },
+              { title: "Approved", value: stats.approved ?? 0, detail: "Successful decisions", icon: CheckCircle2, tone: "green" },
+              { title: "Rejected", value: stats.rejected ?? 0, detail: "Decisions not approved", icon: X, tone: "rose" },
+            ]
           : [
-            ["Total applications", stats.totalApplications ?? applications.length],
-            ["Pending review", stats.pending ?? 0],
-            ["Approved", stats.approved ?? 0],
-            ["Rejected", stats.rejected ?? 0],
-          ];
+              { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "System-wide applications", icon: FileText, tone: "teal" },
+              { title: "Pending review", value: stats.pending ?? 0, detail: "Across active queues", icon: ClipboardCheck, tone: "blue" },
+              { title: "Approved", value: stats.approved ?? 0, detail: "Approved applications", icon: CheckCircle2, tone: "green" },
+              { title: "Rejected", value: stats.rejected ?? 0, detail: "Rejected applications", icon: X, tone: "rose" },
+            ];
 
 
 
@@ -838,27 +838,28 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
           )}
           {active === "Overview" && (
             <>
-              <div>
-                <p className="text-3xl font-bold text-[#193b61]">
-                  Good to see you, {user.name.split(" ")[0]}.
-                </p>
-                <p className="mt-1 text-slate-500">
-                  Your scholarship activity is synced with the secure backend.
-                </p>
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+                <div>
+                  <p className="text-sm font-semibold text-teal-700">{labels[user.role]} workspace</p>
+                  <h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
+                    Good to see you, {user.name.split(" ")[0]}.
+                  </h2>
+                  <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
+                    Here is the latest view of your scholarship activity and work queue.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => loadData()}
+                  className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:text-teal-700"
+                >
+                  <RefreshCw className="size-4" />
+                  Refresh data
+                </button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                {cards.map(([title, value]) => (
-                  <div
-                    key={title}
-                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
-                  >
-                    <p className="text-sm font-semibold text-slate-500">
-                      {title}
-                    </p>
-                    <p className="mt-3 text-3xl font-bold text-[#193b61]">
-                      {loading ? "—" : value}
-                    </p>
-                  </div>
+                {cards.map((card) => (
+                  <StatCard key={card.title} card={card} loading={loading} />
                 ))}
               </div>
 
@@ -1935,6 +1936,49 @@ function ScholarshipList({
     </Panel>
   );
 }
+type StatTone = "teal" | "slate" | "blue" | "green" | "amber" | "indigo" | "violet" | "rose";
+type StatCardData = {
+  title: string;
+  value: number;
+  detail: string;
+  icon: typeof FileText;
+  tone: StatTone;
+};
+
+const statToneClasses: Record<StatTone, { icon: string; value: string }> = {
+  teal: { icon: "bg-teal-50 text-teal-700", value: "text-teal-700" },
+  slate: { icon: "bg-slate-100 text-slate-700", value: "text-slate-800" },
+  blue: { icon: "bg-blue-50 text-blue-700", value: "text-blue-700" },
+  green: { icon: "bg-emerald-50 text-emerald-700", value: "text-emerald-700" },
+  amber: { icon: "bg-amber-50 text-amber-700", value: "text-amber-700" },
+  indigo: { icon: "bg-indigo-50 text-indigo-700", value: "text-indigo-700" },
+  violet: { icon: "bg-violet-50 text-violet-700", value: "text-violet-700" },
+  rose: { icon: "bg-rose-50 text-rose-700", value: "text-rose-700" },
+};
+
+function StatCard({ card, loading }: { card: StatCardData; loading: boolean }) {
+  const Icon = card.icon;
+  const tone = statToneClasses[card.tone];
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-card)] transition hover:-translate-y-0.5 hover:shadow-lg">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-semibold text-slate-500">{card.title}</p>
+          <p className={`mt-3 text-3xl font-bold tracking-tight ${tone.value}`}>
+            {loading ? "—" : card.value}
+          </p>
+        </div>
+        <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}>
+          <Icon className="size-5" />
+        </span>
+      </div>
+      <p className="mt-4 border-t border-slate-100 pt-3 text-xs font-medium text-slate-500">
+        {card.detail}
+      </p>
+    </article>
+  );
+}
+
 function Panel({ title, subtitle, children }: any) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
