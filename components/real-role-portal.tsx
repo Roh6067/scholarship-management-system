@@ -152,6 +152,39 @@ const navByRole: Record<Role, string[]> = {
   ],
 };
 
+const pageTitles: Record<string, string> = {
+  Overview: "Dashboard",
+  "My applications": "My Applications",
+  Scholarships: "Scholarships",
+  Documents: "Documents",
+  "My profile": "My Profile",
+  Notifications: "Notifications",
+  "Verification queue": "Verification Queue",
+  "Correction requests": "Correction Requests",
+  "Review queue": "Review Queue",
+  Recommendations: "Recommendations",
+  "Final decisions": "Final Decisions",
+  Reports: "Reports",
+  "User management": "User Management",
+  Applications: "Applications",
+  "Audit logs": "Audit Logs",
+};
+
+const statusBadgeClasses: Record<string, string> = {
+  Draft: "border-slate-200 bg-slate-100 text-slate-700",
+  Submitted: "border-blue-200 bg-blue-50 text-blue-800",
+  "Under Department Verification": "border-violet-200 bg-violet-50 text-violet-800",
+  "Under Officer Verification": "border-indigo-200 bg-indigo-50 text-indigo-800",
+  "Correction Required": "border-amber-200 bg-amber-50 text-amber-900",
+  Approved: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  Rejected: "border-rose-200 bg-rose-50 text-rose-800",
+};
+
+function readablePageTitle(role: Role, active: string) {
+  const title = pageTitles[active] ?? active;
+  return active === "Overview" ? `${labels[role]} Dashboard` : title;
+}
+
 export default function RealRolePortal() {
   const [user, setUser] = useState<User | null>(null),
     [checking, setChecking] = useState(true),
@@ -755,9 +788,9 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <span aria-hidden="true">/</span>
                 <span>{labels[user.role]}</span>
                 <span aria-hidden="true">/</span>
-                <span className="text-slate-600">{active}</span>
+                <span className="text-slate-600">{pageTitles[active] ?? active}</span>
               </div>
-              <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{active}</h1>
+              <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{readablePageTitle(user.role, active)}</h1>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
@@ -1592,7 +1625,7 @@ function ApplicationTable({
         </p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-left text-sm">
+          <table className="w-full min-w-[680px] text-left text-sm text-slate-800">
             <thead className="border-b text-xs uppercase text-slate-500">
               <tr>
                 <th className="px-4 py-3">Application</th>
@@ -1615,7 +1648,7 @@ function ApplicationTable({
                     {item.scholarship?.name || "Scholarship"}
                   </td>
                   <td className="px-4 py-4">
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold">
+                    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusBadgeClasses[item.status] ?? "border-slate-200 bg-slate-100 text-slate-700"}`}>
                       {item.status}
                     </span>
                     {item.remarks && (
@@ -1904,7 +1937,7 @@ function ScholarshipList({
 }
 function Panel({ title, subtitle, children }: any) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
         <h2 className="font-bold text-[#193b61]">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
