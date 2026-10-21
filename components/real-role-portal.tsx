@@ -5,6 +5,8 @@ import {
   BookOpen,
   CheckCircle2,
   ClipboardCheck,
+  Eye,
+  EyeOff,
   FileCheck2,
   FileText,
   GraduationCap,
@@ -197,7 +199,8 @@ export default function RealRolePortal() {
       password: "",
     }),
     [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [submitting, setSubmitting] = useState(false);
   useEffect(() => {
     authApi
       .me()
@@ -232,6 +235,7 @@ export default function RealRolePortal() {
     event.preventDefault();
     setError("");
     setNotice("");
+    setSubmitting(true);
     try {
       const response =
         mode === "register"
@@ -249,6 +253,8 @@ export default function RealRolePortal() {
       setError(
         cause.response?.data?.message ?? "Unable to complete the request.",
       );
+    } finally {
+      setSubmitting(false);
     }
   }
   async function signOut() {
@@ -275,6 +281,7 @@ export default function RealRolePortal() {
         setForm={setForm}
         error={error}
         notice={notice}
+        submitting={submitting}
         submit={submit}
       />
     );
@@ -290,11 +297,13 @@ function Login({
   setForm,
   error,
   notice,
+  submitting,
   submit,
 }: any) {
+  const [showPassword, setShowPassword] = useState(false);
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-10 text-slate-900">
-      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl items-center gap-12 lg:grid-cols-[1fr_440px]">
+    <main className="min-h-screen overflow-x-hidden bg-[#F8FAFC] px-4 py-6 text-[#0F172A] sm:px-6 sm:py-10">
+      <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl items-center gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1fr_440px] lg:gap-12">
         <section className="hidden lg:block">
           <Brand />
           <h1 className="mt-10 max-w-xl text-5xl font-bold leading-tight tracking-tight text-[#193b61]">
@@ -305,7 +314,7 @@ function Login({
             administrators.
           </p>
         </section>
-        <section className="rounded-3xl border border-slate-200 bg-white p-7 shadow-xl sm:p-9">
+        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-[var(--shadow-card)] sm:p-9">
           <div className="lg:hidden">
             <Brand />
           </div>
@@ -351,48 +360,73 @@ function Login({
               </label>
             )}
             {mode === "register" && (
-              <input
+              <label className="text-sm font-semibold text-slate-700">
+                Full name
+                <input
+                id="full-name"
                 required
+                autoComplete="name"
                 placeholder="Full name"
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="rounded-xl border border-slate-200 px-3 py-3"
-              />
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+                />
+              </label>
             )}
             {mode === "register" && (
-              <input
+              <label className="text-sm font-semibold text-slate-700">
+                Student ID <span className="font-normal text-slate-400">(optional)</span>
+                <input
+                id="student-id"
                 placeholder="Student ID (optional)"
                 value={form.studentId}
                 onChange={(e) =>
                   setForm({ ...form, studentId: e.target.value })
                 }
-                className="rounded-xl border border-slate-200 px-3 py-3"
-              />
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+                />
+              </label>
             )}
+            <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+              Email address
             <input
+              id="email"
+              autoComplete="email"
               required
               type="email"
               placeholder="Email address"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="rounded-xl border border-slate-200 px-3 py-3"
+              className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
             />
+            </label>
+            <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+              Password
+              <span className="relative mt-2 block">
             <input
+              id="password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
               required
               minLength={8}
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="rounded-xl border border-slate-200 px-3 py-3"
+              className="min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 pr-12 font-normal"
             />
-            <button className="cursor-pointer rounded-xl bg-[#193b61] px-4 py-3 font-bold text-white hover:bg-[#102d4b]">
-              {mode === "login" ? "Sign in securely" : "Create student account"}
+            <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={showPassword ? "Hide password" : "Show password"}>
+              {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+              </span>
+            </label>
+            <button disabled={submitting} className="min-h-12 cursor-pointer rounded-xl bg-[#0D9488] px-4 py-3 font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
+              {submitting ? "Securing your session…" : mode === "login" ? "Sign in securely" : "Create student account"}
             </button>
           </form>
           <button
             onClick={() => setMode(mode === "login" ? "register" : "login")}
-            className="mt-5 cursor-pointer text-sm font-bold text-teal-700 hover:underline"
+            type="button"
+            className="mt-5 min-h-11 cursor-pointer text-left text-sm font-bold text-teal-700 hover:underline"
           >
             {mode === "login"
               ? "New student? Create an account"
