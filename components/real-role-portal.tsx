@@ -837,13 +837,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <Bell className="size-5" />
               {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />}
             </button>
-            <button
-              onClick={() => loadData()}
-              className="cursor-pointer rounded-xl p-2.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:bg-teal-50"
-              aria-label="Refresh data"
-            >
-              <RefreshCw className="size-5" />
-            </button>
+            
+          
             <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
               <span className="flex size-9 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">{user.name.slice(0, 1).toUpperCase()}</span>
               <div className="hidden lg:block">

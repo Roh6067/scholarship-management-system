@@ -14,6 +14,14 @@ const applicationSchema = new Schema({ applicationNumber: { type: String, unique
 const documentSchema = new Schema({ owner: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true }, application: { type: Schema.Types.ObjectId, ref: 'Application', index: true }, type: { type: String, required: true, trim: true }, originalName: String, storedName: String, mimeType: String, size: { type: Number, max: 10 * 1024 * 1024 }, content: { type: Buffer, select: false } }, { timestamps: true })
 const notificationSchema = new Schema({ user: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true }, title: { type: String, required: true }, message: { type: String, required: true }, read: { type: Boolean, default: false, index: true } }, { timestamps: true })
 const auditSchema = new Schema({ actor: { type: Schema.Types.ObjectId, ref: 'User' }, action: { type: String, required: true }, entity: { type: String, required: true }, entityId: String, remarks: String }, { timestamps: true })
+userSchema.index(
+  { role: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { role: 'director' },
+    name: 'one_director_only',
+  },
+)
 
 export const User = mongoose.models.User || mongoose.model('User', userSchema)
 export const StudentProfile = mongoose.models.StudentProfile || mongoose.model('StudentProfile', profileSchema)
