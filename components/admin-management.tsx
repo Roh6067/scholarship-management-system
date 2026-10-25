@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { adminApi } from "@/lib/api";
+import { useStudentLanguage } from "@/lib/student-i18n";
 
 type Tab = "scholarships" | "users" | "applications" | "audit";
 type Scholarship = {
@@ -41,6 +42,7 @@ export default function AdminManagement({
 }: {
   auditOnly?: boolean;
 }) {
+  const { t } = useStudentLanguage();
   const [tab, setTab] = useState<Tab>(
   auditOnly ? "audit" : "scholarships",
 );
@@ -78,7 +80,7 @@ export default function AdminManagement({
       setAudit(l.data);
     } catch (e: any) {
       setError(
-        e.response?.data?.message ?? "Unable to load administrator data.",
+        e.response?.data?.message ?? t("Unable to load administrator data."),
       );
     } finally {
       setLoading(false);
@@ -123,7 +125,7 @@ export default function AdminManagement({
     try {
       if (editing) await adminApi.updateScholarship(editing, toPayload());
       else await adminApi.createScholarship(toPayload());
-      setMessage(editing ? "Scholarship updated." : "Scholarship created.");
+      setMessage(editing ? t("Scholarship updated.") : t("Scholarship created."));
       setShowForm(false);
       setEditing(null);
       setForm(empty);
@@ -195,17 +197,17 @@ export default function AdminManagement({
     }
   }
   const tabs: [Tab, string, number][] = [
-    ["scholarships", "Scholarships", scholarships.length],
-    ["users", "Users", users.length],
-    ["applications", "Applications", applications.length],
-    ["audit", "Audit log", audit.length],
+    ["scholarships", t("Scholarships"), scholarships.length],
+    ["users", t("Users"), users.length],
+    ["applications", t("Applications"), applications.length],
+    ["audit", t("Audit log"), audit.length],
   ];
   if (auditOnly) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-5 text-slate-900 shadow-sm sm:p-7">
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-2xl font-bold text-[#123b68]">
-          Audit Logs
+          {t("Audit Logs")}
         </h2>
 
         <button
