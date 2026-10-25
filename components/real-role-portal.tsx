@@ -305,7 +305,7 @@ function Login({
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl items-center gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1fr_440px] lg:gap-12">
         <section className="hidden lg:block">
           <Brand />
-          <h1 className="mt-10 max-w-xl text-5xl font-bold leading-tight tracking-tight text-[#193b61]">
+          <h1 className="mt-10 max-w-xl text-5xl font-bold leading-tight tracking-tight text-slate-800">
             One secure place for every scholarship journey.
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-8 text-slate-500">
@@ -320,7 +320,7 @@ function Login({
           <p className="mt-8 text-sm font-semibold text-teal-600">
             {mode === "login" ? "Welcome back" : "Student registration"}
           </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#193b61]">
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-800">
             {mode === "login"
               ? "Sign in to your workspace"
               : "Start your application journey"}
@@ -875,12 +875,12 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
 
   const statusColors: Record<string, string> = {
     Draft: "#94a3b8",
-    Submitted: "#3b82f6",
-    "Under Department Verification": "#8b5cf6",
-    "Under Officer Verification": "#f59e0b",
-    "Correction Required": "#f97316",
-    Approved: "#10b981",
-    Rejected: "#ef4444",
+    Submitted: "#2563eb",
+    "Under Department Verification": "#6366f1",
+    "Under Officer Verification": "#0f766e",
+    "Correction Required": "#b45309",
+    Approved: "#047857",
+    Rejected: "#be123c",
   };
 
   const statusChartData = Object.entries(stats.byStatus ?? {})
@@ -1079,7 +1079,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <div className="grid gap-6 xl:grid-cols-2">
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
-                    <h2 className="text-lg font-bold text-[#193b61]">
+                    <h2 className="text-lg font-bold text-slate-800">
                       {user.role === "student"
                         ? "My Application Status"
                         : user.role === "staff"
@@ -1131,8 +1131,17 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                             />
                           ))}
                         </Pie>
-                        <Tooltip />
-                        <Legend />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            backgroundColor: "#ffffff",
+                            color: "#0f172a",
+                            boxShadow: "0 8px 24px rgb(15 23 42 / 0.10)",
+                          }}
+                          labelStyle={{ color: "#334155", fontWeight: 700 }}
+                        />
+                        <Legend wrapperStyle={{ color: "#475569", fontSize: 12 }} />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
@@ -1140,7 +1149,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
 
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
-                    <h2 className="text-lg font-bold text-[#193b61]">
+                    <h2 className="text-lg font-bold text-slate-800">
                       {user.role === "student"
                         ? "My Monthly Applications"
                         : user.role === "staff"
@@ -1173,10 +1182,19 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                             : (stats.roleActivityTrend ?? stats.monthlyTrend)
                         }
                       >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={{ stroke: "#cbd5e1" }} />
+                        <YAxis allowDecimals={false} tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={{ stroke: "#cbd5e1" }} />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            backgroundColor: "#ffffff",
+                            color: "#0f172a",
+                            boxShadow: "0 8px 24px rgb(15 23 42 / 0.10)",
+                          }}
+                          labelStyle={{ color: "#334155", fontWeight: 700 }}
+                        />
                         <Line
                           type="monotone"
                           dataKey="applications"
@@ -1278,7 +1296,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-[#193b61]">
+              <h3 className="text-lg font-bold text-slate-800">
                 {remarkDialog.nextStatus === "Correction Required"
                   ? "Request Application Correction"
                   : "Reject Application"}
@@ -2105,7 +2123,7 @@ function ScholarshipList({
               <article key={item._id} className="rounded-2xl border p-5">
                 <div className="flex justify-between gap-4">
                   <div>
-                    <h3 className="font-bold text-[#193b61]">{item.name}</h3>
+                    <h3 className="font-bold text-slate-800">{item.name}</h3>
                     <p className="text-sm font-semibold text-teal-700">
                       {item.provider}
                     </p>
@@ -2194,7 +2212,7 @@ function Panel({ title, subtitle, children }: any) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="font-bold text-[#193b61]">{title}</h2>
+        <h2 className="font-bold text-slate-800">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {children}
@@ -2227,7 +2245,7 @@ function Brand({ light = false }: { light?: boolean }) {
       </div>
       <div>
         <p
-          className={`text-lg font-bold ${light ? "text-white" : "text-[#193b61]"}`}
+          className={`text-lg font-bold ${light ? "text-white" : "text-slate-800"}`}
         >
           ScholarFlow
         </p>
