@@ -32,7 +32,10 @@ import {
   scholarshipApi,
 } from "@/lib/api";
 import AdminManagement from "@/components/admin-management";
-import { StudentLanguageProvider, useStudentLanguage } from "@/lib/student-i18n";
+import {
+  StudentLanguageProvider,
+  useStudentLanguage,
+} from "@/lib/student-i18n";
 
 import {
   ResponsiveContainer,
@@ -310,7 +313,7 @@ function Login({
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl items-center gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1fr_440px] lg:gap-12">
         <section className="hidden lg:block">
           <Brand />
-          <h1 className="mt-10 max-w-xl text-5xl font-bold leading-tight tracking-tight text-slate-800">
+          <h1 className="mt-10 max-w-xl bg-gradient-to-r from-[#49a09d] to-[#5f2c82] bg-clip-text text-5xl font-bold leading-tight tracking-tight text-transparent">
             One secure place for every scholarship journey.
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-8 text-slate-500">
@@ -995,10 +998,14 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <div className="mb-1 hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
                 <span>ScholarFlow</span>
                 <span aria-hidden="true">/</span>
-                <span>{isStudent ? t(labels[user.role]) : labels[user.role]}</span>
+                <span>
+                  {isStudent ? t(labels[user.role]) : labels[user.role]}
+                </span>
                 <span aria-hidden="true">/</span>
                 <span className="text-slate-600">
-                  {isStudent ? t(pageTitles[active] ?? active) : pageTitles[active] ?? active}
+                  {isStudent
+                    ? t(pageTitles[active] ?? active)
+                    : (pageTitles[active] ?? active)}
                 </span>
               </div>
               <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
@@ -1024,14 +1031,18 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             </button>
 
             {languageContext && (
-              <label className="sr-only" htmlFor="portal-language">Language</label>
+              <label className="sr-only" htmlFor="portal-language">
+                Language
+              </label>
             )}
             {languageContext && (
               <select
                 id="portal-language"
                 aria-label="Language / भाषा"
                 value={languageContext.language}
-                onChange={(event) => languageContext.setLanguage(event.target.value as "en" | "hi")}
+                onChange={(event) =>
+                  languageContext.setLanguage(event.target.value as "en" | "hi")
+                }
                 className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700"
               >
                 <option value="en">English</option>
@@ -1073,13 +1084,22 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-sm font-semibold text-teal-700">
-                    {isStudent ? t(labels[user.role]) : labels[user.role]} {isStudent ? t("Workspace") : "workspace"}
+                    {isStudent ? t(labels[user.role]) : labels[user.role]}{" "}
+                    {isStudent ? t("Workspace") : "workspace"}
                   </p>
                   <h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                    {isStudent ? t("Good to see you, {name}.", { name: user.name.split(" ")[0] }) : `Good to see you, ${user.name.split(" ")[0]}.`}
+                    {isStudent
+                      ? t("Good to see you, {name}.", {
+                          name: user.name.split(" ")[0],
+                        })
+                      : `Good to see you, ${user.name.split(" ")[0]}.`}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
-                    {isStudent ? t("Here is the latest view of your scholarship activity and work queue.") : "Here is the latest view of your scholarship activity and work queue."}
+                    {isStudent
+                      ? t(
+                          "Here is the latest view of your scholarship activity and work queue.",
+                        )
+                      : "Here is the latest view of your scholarship activity and work queue."}
                   </p>
                 </div>
                 <button
@@ -1093,7 +1113,19 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {cards.map((card) => (
-                  <StatCard key={card.title} card={isStudent ? { ...card, title: t(card.title), detail: t(card.detail) } : card} loading={loading} />
+                  <StatCard
+                    key={card.title}
+                    card={
+                      isStudent
+                        ? {
+                            ...card,
+                            title: t(card.title),
+                            detail: t(card.detail),
+                          }
+                        : card
+                    }
+                    loading={loading}
+                  />
                 ))}
               </div>
 
@@ -1101,8 +1133,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
                     <h2 className="text-lg font-bold text-slate-800">
-{user.role === "student"
-                    ? t("My Application Status")
+                      {user.role === "student"
+                        ? t("My Application Status")
                         : user.role === "staff"
                           ? "Application Verification Overview"
                           : user.role === "officer"
@@ -1112,8 +1144,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                               : "System-wide Application Status"}
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-{user.role === "student"
-                    ? t("Track the status of your scholarship applications")
+                      {user.role === "student"
+                        ? t("Track the status of your scholarship applications")
                         : user.role === "staff"
                           ? "Monitor application statuses and department verification"
                           : user.role === "officer"
@@ -1162,7 +1194,9 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                           }}
                           labelStyle={{ color: "#334155", fontWeight: 700 }}
                         />
-                        <Legend wrapperStyle={{ color: "#475569", fontSize: 12 }} />
+                        <Legend
+                          wrapperStyle={{ color: "#475569", fontSize: 12 }}
+                        />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
@@ -1171,8 +1205,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
                     <h2 className="text-lg font-bold text-slate-800">
-{user.role === "student"
-                    ? t("My Monthly Applications")
+                      {user.role === "student"
+                        ? t("My Monthly Applications")
                         : user.role === "staff"
                           ? "Monthly Verification Workload"
                           : user.role === "officer"
@@ -1204,8 +1238,18 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                         }
                       >
                         <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                        <XAxis dataKey="month" tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={{ stroke: "#cbd5e1" }} />
-                        <YAxis allowDecimals={false} tick={{ fill: "#64748b", fontSize: 12 }} axisLine={{ stroke: "#cbd5e1" }} tickLine={{ stroke: "#cbd5e1" }} />
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fill: "#64748b", fontSize: 12 }}
+                          axisLine={{ stroke: "#cbd5e1" }}
+                          tickLine={{ stroke: "#cbd5e1" }}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fill: "#64748b", fontSize: 12 }}
+                          axisLine={{ stroke: "#cbd5e1" }}
+                          tickLine={{ stroke: "#cbd5e1" }}
+                        />
                         <Tooltip
                           contentStyle={{
                             borderRadius: 12,
@@ -1497,7 +1541,9 @@ function Documents({
           className="rounded-2xl border-2 border-dashed border-teal-200 bg-teal-50/50 p-8 text-center"
         >
           <Upload className="mx-auto text-teal-700" />
-          <p className="mt-2 font-semibold">{t("Drop a file here or choose one")}</p>
+          <p className="mt-2 font-semibold">
+            {t("Drop a file here or choose one")}
+          </p>
           <input
             type="file"
             accept="application/pdf,image/jpeg,image/png"
@@ -1815,7 +1861,9 @@ function ApplicationTable({
     <Panel
       title={
         isOverviewSummary
-          ? student ? t("Recent applications") : "Recent applications"
+          ? student
+            ? t("Recent applications")
+            : "Recent applications"
           : role === "student"
             ? t("My applications")
             : t("Application workflow")
@@ -1825,7 +1873,9 @@ function ApplicationTable({
           ? "Latest 5 records"
           : pagination
             ? `${t("Page")} ${pagination.page} ${t("of")} ${pagination.totalPages} · ${pagination.total} ${t("total")}`
-            : student ? t("Live records from the scholarship system") : "Live records from the scholarship system"
+            : student
+              ? t("Live records from the scholarship system")
+              : "Live records from the scholarship system"
       }
     >
       {/* ── Status filter + pagination header ── */}
@@ -1849,7 +1899,9 @@ function ApplicationTable({
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-500">
                 {pagination.total === 0
-                  ? student ? t("No results") : "No results"
+                  ? student
+                    ? t("No results")
+                    : "No results"
                   : `${(pagination.page - 1) * pagination.limit + 1}–${Math.min(
                       pagination.page * pagination.limit,
                       pagination.total,
@@ -1885,17 +1937,27 @@ function ApplicationTable({
         <p className="p-5 text-sm text-slate-500">
           {currentStatus
             ? `No applications with status "${currentStatus}".`
-            : student ? t("No applications match this view.") : "No applications match this view."}
+            : student
+              ? t("No applications match this view.")
+              : "No applications match this view."}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-left text-sm text-slate-800">
             <thead className="border-b text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">{student ? t("Application") : "Application"}</th>
-                <th className="px-4 py-3">{student ? t("Applicant") : "Applicant"}</th>
-                <th className="px-4 py-3">{student ? t("Scholarship") : "Scholarship"}</th>
-                <th className="px-4 py-3">{student ? t("Status") : "Status"}</th>
+                <th className="px-4 py-3">
+                  {student ? t("Application") : "Application"}
+                </th>
+                <th className="px-4 py-3">
+                  {student ? t("Applicant") : "Applicant"}
+                </th>
+                <th className="px-4 py-3">
+                  {student ? t("Scholarship") : "Scholarship"}
+                </th>
+                <th className="px-4 py-3">
+                  {student ? t("Status") : "Status"}
+                </th>
                 <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
@@ -2139,7 +2201,11 @@ function ScholarshipList({
   return (
     <Panel
       title={student ? t("Active scholarships") : "Active scholarships"}
-      subtitle={student ? t("Published opportunities with future deadlines") : "Published opportunities with future deadlines"}
+      subtitle={
+        student
+          ? t("Published opportunities with future deadlines")
+          : "Published opportunities with future deadlines"
+      }
     >
       {loading ? (
         <p className="p-5">{student ? t("Loading...") : "Loading..."}</p>
@@ -2147,7 +2213,9 @@ function ScholarshipList({
         <div className="grid gap-4 p-5 lg:grid-cols-2">
           {scholarships.length === 0 ? (
             <p className="text-sm text-slate-500">
-              {student ? t("No active scholarships are available.") : "No active scholarships are available."}
+              {student
+                ? t("No active scholarships are available.")
+                : "No active scholarships are available."}
             </p>
           ) : (
             scholarships.map((item: Scholarship) => (
@@ -2166,8 +2234,10 @@ function ScholarshipList({
                     "Scholarship opportunity for eligible students."}
                 </p>
                 <p className="mt-3 text-xs text-slate-500">
-                  {student ? t("Deadline") : "Deadline"} {new Date(item.deadline).toLocaleDateString()} ·{" "}
-                  {item.requiredDocuments?.length ?? 0} {student ? t("required documents") : "required documents"}
+                  {student ? t("Deadline") : "Deadline"}{" "}
+                  {new Date(item.deadline).toLocaleDateString()} ·{" "}
+                  {item.requiredDocuments?.length ?? 0}{" "}
+                  {student ? t("required documents") : "required documents"}
                 </p>
                 <button
                   disabled={applied.has(item._id)}
@@ -2175,8 +2245,12 @@ function ScholarshipList({
                   className="mt-4 cursor-pointer rounded-xl bg-[#193b61] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {applied.has(item._id)
-                    ? student ? t("Application started") : "Application started"
-                    : student ? t("Start application") : "Start application"}
+                    ? student
+                      ? t("Application started")
+                      : "Application started"
+                    : student
+                      ? t("Start application")
+                      : "Start application"}
                 </button>
               </article>
             ))
@@ -2276,7 +2350,11 @@ function Brand({ light = false }: { light?: boolean }) {
       </div>
       <div>
         <p
-          className={`text-lg font-bold ${light ? "text-white" : "text-slate-800"}`}
+          className={`text-lg font-bold ${
+            light
+              ? "bg-gradient-to-r from-[#fbc7d4] to-[#9796f0] bg-clip-text text-transparent"
+              : "bg-gradient-to-r from-[#fbc7d4] to-[#9796f0] bg-clip-text text-transparent"
+          }`}
         >
           ScholarFlow
         </p>
