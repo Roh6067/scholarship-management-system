@@ -32,6 +32,7 @@ import {
   scholarshipApi,
 } from "@/lib/api";
 import AdminManagement from "@/components/admin-management";
+import { StudentLanguageProvider, useStudentLanguage } from "@/lib/student-i18n";
 
 import {
   ResponsiveContainer,
@@ -284,7 +285,11 @@ export default function RealRolePortal() {
         submit={submit}
       />
     );
-  return <Dashboard user={user} signOut={signOut} />;
+  return (
+    <StudentLanguageProvider>
+      <Dashboard user={user} signOut={signOut} />
+    </StudentLanguageProvider>
+  );
 }
 
 function Login({
@@ -467,6 +472,8 @@ function Login({
 const APP_PAGE_LIMIT = 20;
 
 function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
+  const languageContext = useStudentLanguage();
+  const t = languageContext.t;
   const [active, setActive] = useState("Overview"),
     [open, setOpen] = useState(false),
     [applications, setApplications] = useState<Application[]>([]),
@@ -479,7 +486,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
 
-  // ── Pagination state ──────────────────────────────────────────────────────
+  // ── Pagination state ───��──────────────────────────────────────────────────
   const [applPage, setApplPage] = useState(1);
   const [applStatus, setApplStatus] = useState("");
   const [applPagination, setApplPagination] = useState<Pagination | null>(null);
@@ -885,7 +892,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
 
   const statusChartData = Object.entries(stats.byStatus ?? {})
     .map(([name, value]) => ({
-      name,
+      name: isStudent ? t(name) : name,
       value: Number(value),
     }))
     .filter((item) => item.value > 0);
@@ -931,7 +938,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
           </div>
         </div>
         <div className="px-5 pb-2 pt-7 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-          Workspace
+          {isStudent ? t("Workspace") : "Workspace"}
         </div>
         <nav
           aria-label={`${labels[user.role]} navigation`}
@@ -952,7 +959,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <span className="absolute -left-3 h-7 w-1 rounded-r-full bg-teal-300" />
               )}
               <NavIcon item={item} />
-              <span className="truncate">{item}</span>
+              <span className="truncate">{isStudent ? t(item) : item}</span>
               {item === "Notifications" && unreadCount > 0 && (
                 <span
                   className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active === item ? "bg-white/20 text-white" : "bg-rose-400 text-white"}`}
@@ -969,7 +976,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"
           >
             <LogOut className="size-5" />
-            Sign out
+            {isStudent ? t("Sign out") : "Sign out"}
           </button>
         </div>
       </aside>
@@ -988,14 +995,14 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <div className="mb-1 hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
                 <span>ScholarFlow</span>
                 <span aria-hidden="true">/</span>
-                <span>{labels[user.role]}</span>
+                <span>{isStudent ? t(labels[user.role]) : labels[user.role]}</span>
                 <span aria-hidden="true">/</span>
                 <span className="text-slate-600">
-                  {pageTitles[active] ?? active}
+                  {isStudent ? t(pageTitles[active] ?? active) : pageTitles[active] ?? active}
                 </span>
               </div>
               <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                {readablePageTitle(user.role, active)}
+                {isStudent ? t(readablePageTitle(user.role, active)) : readablePageTitle(user.role, active)}
               </h1>
             </div>
           </div>
@@ -1016,6 +1023,21 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               )}
             </button>
 
+            {isStudent && languageContext && (
+              <label className="sr-only" htmlFor="student-language">Language</label>
+            )}
+            {isStudent && languageContext && (
+              <select
+                id="student-language"
+                aria-label="Language / भाषा"
+                value={languageContext.language}
+                onChange={(event) => languageContext.setLanguage(event.target.value as "en" | "hi")}
+                className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700"
+              >
+                <option value="en">English</option>
+                <option value="hi">हिन्दी</option>
+              </select>
+            )}
             <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
               <span className="flex size-9 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">
                 {user.name.slice(0, 1).toUpperCase()}
@@ -1051,14 +1073,13 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div>
                   <p className="text-sm font-semibold text-teal-700">
-                    {labels[user.role]} workspace
+                    {isStudent ? t(labels[user.role]) : labels[user.role]} {isStudent ? t("Workspace") : "workspace"}
                   </p>
                   <h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                    Good to see you, {user.name.split(" ")[0]}.
+                    {isStudent ? t("Good to see you, {name}.", { name: user.name.split(" ")[0] }) : `Good to see you, ${user.name.split(" ")[0]}.`}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
-                    Here is the latest view of your scholarship activity and
-                    work queue.
+                    {isStudent ? t("Here is the latest view of your scholarship activity and work queue.") : "Here is the latest view of your scholarship activity and work queue."}
                   </p>
                 </div>
                 <button
@@ -1067,12 +1088,12 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                   className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:text-teal-700"
                 >
                   <RefreshCw className="size-4" />
-                  Refresh data
+                  {isStudent ? t("Refresh data") : "Refresh data"}
                 </button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {cards.map((card) => (
-                  <StatCard key={card.title} card={card} loading={loading} />
+                  <StatCard key={card.title} card={isStudent ? { ...card, title: t(card.title), detail: t(card.detail) } : card} loading={loading} />
                 ))}
               </div>
 
@@ -1080,8 +1101,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
                     <h2 className="text-lg font-bold text-slate-800">
-                      {user.role === "student"
-                        ? "My Application Status"
+{user.role === "student"
+                    ? t("My Application Status")
                         : user.role === "staff"
                           ? "Application Verification Overview"
                           : user.role === "officer"
@@ -1091,8 +1112,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                               : "System-wide Application Status"}
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                      {user.role === "student"
-                        ? "Track the status of your scholarship applications"
+{user.role === "student"
+                    ? t("Track the status of your scholarship applications")
                         : user.role === "staff"
                           ? "Monitor application statuses and department verification"
                           : user.role === "officer"
@@ -1150,8 +1171,8 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
                     <h2 className="text-lg font-bold text-slate-800">
-                      {user.role === "student"
-                        ? "My Monthly Applications"
+{user.role === "student"
+                    ? t("My Monthly Applications")
                         : user.role === "staff"
                           ? "Monthly Verification Workload"
                           : user.role === "officer"
@@ -1247,7 +1268,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               user={user}
               onSaved={async () => {
                 await loadData();
-                setMessage("Profile saved successfully.");
+                setMessage(t("Profile saved successfully."));
               }}
             />
           )}
@@ -1388,6 +1409,7 @@ function Documents({
   setError,
   setMessage,
 }: any) {
+  const { t } = useStudentLanguage();
   const [type, setType] = useState("marksheet"),
     [file, setFile] = useState<File | null>(null),
     [busy, setBusy] = useState(false);
@@ -1607,6 +1629,7 @@ function RequiredDocuments({ applications, documents }: any) {
   );
 }
 function ProfileEditor({ profile, user, onSaved }: any) {
+  const { t } = useStudentLanguage();
   const [data, setData] = useState(profile);
   useEffect(() => setData(profile), [profile]);
   async function save(e: FormEvent) {
@@ -1624,8 +1647,8 @@ function ProfileEditor({ profile, user, onSaved }: any) {
   ];
   return (
     <Panel
-      title="My profile"
-      subtitle="Keep your eligibility information current"
+      title={t("My profile")}
+      subtitle={t("Keep your eligibility information current")}
     >
       <form onSubmit={save} className="grid gap-4 p-5 sm:grid-cols-2">
         <div className="sm:col-span-2 rounded-xl bg-slate-50 p-4">
@@ -1637,7 +1660,7 @@ function ProfileEditor({ profile, user, onSaved }: any) {
         </div>
         {fields.map(([key, label, type]) => (
           <label key={key} className="text-sm font-semibold">
-            {label}
+            {t(label)}
             <input
               required={[
                 "course",
@@ -1660,7 +1683,7 @@ function ProfileEditor({ profile, user, onSaved }: any) {
           </label>
         ))}
         <button className="cursor-pointer rounded-xl bg-[#193b61] px-4 py-3 font-bold text-white sm:col-span-2">
-          Save profile
+          {t("Save profile")}
         </button>
       </form>
     </Panel>
@@ -1673,10 +1696,11 @@ function Notifications({
   items: Notification[];
   onRead: (id: string) => void;
 }) {
+  const { t } = useStudentLanguage();
   return (
     <Panel
-      title="Notifications"
-      subtitle="Application events and correction requests"
+      title={t("Notifications")}
+      subtitle={t("Application events and correction requests")}
     >
       <div className="divide-y divide-slate-100">
         {items.length === 0 ? (
@@ -1701,7 +1725,7 @@ function Notifications({
                   onClick={() => onRead(item._id as string)}
                   className="cursor-pointer text-xs font-bold text-teal-700 hover:underline"
                 >
-                  Mark read
+                  {t("Mark read")}
                 </button>
               )}
             </div>
