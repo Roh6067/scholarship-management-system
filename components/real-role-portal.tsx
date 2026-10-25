@@ -286,7 +286,7 @@ export default function RealRolePortal() {
       />
     );
   return (
-    <StudentLanguageProvider>
+    <StudentLanguageProvider enabled={user.role === "student"}>
       <Dashboard user={user} signOut={signOut} />
     </StudentLanguageProvider>
   );
@@ -1251,6 +1251,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               applications={applications}
               loading={loading}
               onApply={apply}
+              role={user.role}
             />
           )}
           {active === "Documents" && isStudent && (
@@ -1424,10 +1425,10 @@ function Documents({
   ];
 
   async function upload() {
-    if (!file) return setError("Choose a document first.");
+    if (!file) return setError(t("Choose a document first."));
 
     if (file.size > 10 * 1024 * 1024) {
-      return setError("Files must be 10 MB or smaller.");
+      return setError(t("Files must be 10 MB or smaller."));
     }
 
     const data = new FormData();
@@ -1484,8 +1485,8 @@ function Documents({
   return (
     <div className="space-y-6">
       <Panel
-        title="Upload documents"
-        subtitle="PDF, JPG, JPEG, or PNG up to 10 MB"
+        title={t("Upload documents")}
+        subtitle={t("PDF, JPG, JPEG, or PNG up to 10 MB")}
       >
         <div
           onDragOver={(e) => e.preventDefault()}
@@ -1496,7 +1497,7 @@ function Documents({
           className="rounded-2xl border-2 border-dashed border-teal-200 bg-teal-50/50 p-8 text-center"
         >
           <Upload className="mx-auto text-teal-700" />
-          <p className="mt-2 font-semibold">Drop a file here or choose one</p>
+          <p className="mt-2 font-semibold">{t("Drop a file here or choose one")}</p>
           <input
             type="file"
             accept="application/pdf,image/jpeg,image/png"
@@ -1525,19 +1526,19 @@ function Documents({
               onClick={upload}
               className="cursor-pointer rounded-xl bg-[#193b61] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {busy ? "Uploading..." : "Upload"}
+              {busy ? t("Uploading...") : t("Upload")}
             </button>
           </div>
         </div>
       </Panel>
       <Panel
-        title="Your documents"
-        subtitle="Stored privately against your student account"
+        title={t("Your documents")}
+        subtitle={t("Stored privately against your student account")}
       >
         <div className="divide-y divide-slate-100">
           {documents.length === 0 ? (
             <p className="p-5 text-sm text-slate-500">
-              No documents uploaded yet.
+              {t("No documents uploaded yet.")}
             </p>
           ) : (
             documents.map((doc: DocumentRecord) => (
@@ -1569,7 +1570,7 @@ function Documents({
                     onClick={async () => {
                       try {
                         await documentApi.remove(doc._id);
-                        setMessage("Document deleted successfully.");
+                        setMessage(t("Document deleted successfully."));
                         await onChanged();
                       } catch (cause: any) {
                         setError(
@@ -1594,12 +1595,13 @@ function Documents({
   );
 }
 function RequiredDocuments({ applications, documents }: any) {
+  const { t } = useStudentLanguage();
   const available = new Set(documents.map((d: DocumentRecord) => d.type));
 
   return (
     <Panel
-      title="Application checklist"
-      subtitle="Required documents are checked by the server at submission"
+      title={t("Application checklist")}
+      subtitle={t("Required documents are checked by the server at submission")}
     >
       <div className="divide-y divide-slate-100">
         {applications
@@ -1617,7 +1619,7 @@ function RequiredDocuments({ applications, documents }: any) {
                     key={required}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${available.has(required) ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}
                   >
-                    {available.has(required) ? "Ready" : "Missing"}:{" "}
+                    {available.has(required) ? t("Ready") : t("Missing")}:{" "}
                     {required.replaceAll("-", " ")}
                   </span>
                 ))}
@@ -1705,7 +1707,7 @@ function Notifications({
       <div className="divide-y divide-slate-100">
         {items.length === 0 ? (
           <p className="p-5 text-sm text-slate-500">
-            You have no notifications.
+            {t("You have no notifications.")}
           </p>
         ) : (
           items.map((item: Notification) => (
@@ -1794,7 +1796,9 @@ function ApplicationTable({
   onStatusChange,
   isOverviewSummary,
 }: any) {
+  const { t } = useStudentLanguage();
   const showControls = !isOverviewSummary;
+  const student = role === "student";
 
   const statusOptions =
     role === "staff"
@@ -1811,17 +1815,17 @@ function ApplicationTable({
     <Panel
       title={
         isOverviewSummary
-          ? "Recent applications"
+          ? student ? t("Recent applications") : "Recent applications"
           : role === "student"
-            ? "My applications"
-            : "Application workflow"
+            ? t("My applications")
+            : t("Application workflow")
       }
       subtitle={
         isOverviewSummary
           ? "Latest 5 records"
           : pagination
-            ? `Page ${pagination.page} of ${pagination.totalPages} · ${pagination.total} total`
-            : "Live records from the scholarship system"
+            ? `${t("Page")} ${pagination.page} ${t("of")} ${pagination.totalPages} · ${pagination.total} ${t("total")}`
+            : student ? t("Live records from the scholarship system") : "Live records from the scholarship system"
       }
     >
       {/* ── Status filter + pagination header ── */}
@@ -1832,11 +1836,11 @@ function ApplicationTable({
             value={currentStatus ?? ""}
             onChange={(e) => onStatusChange?.(e.target.value)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
-            aria-label="Filter by status"
+            aria-label={student ? t("Filter by status") : "Filter by status"}
           >
             {statusOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {student ? t(opt.label) : opt.label}
               </option>
             ))}
           </select>
@@ -1845,7 +1849,7 @@ function ApplicationTable({
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-500">
                 {pagination.total === 0
-                  ? "No results"
+                  ? student ? t("No results") : "No results"
                   : `${(pagination.page - 1) * pagination.limit + 1}–${Math.min(
                       pagination.page * pagination.limit,
                       pagination.total,
@@ -1855,7 +1859,7 @@ function ApplicationTable({
                 onClick={() => onPageChange?.(pagination.page - 1)}
                 disabled={!pagination.hasPrev}
                 className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous page"
+                aria-label={student ? t("Previous page") : "Previous page"}
               >
                 ← Prev
               </button>
@@ -1881,17 +1885,17 @@ function ApplicationTable({
         <p className="p-5 text-sm text-slate-500">
           {currentStatus
             ? `No applications with status "${currentStatus}".`
-            : "No applications match this view."}
+            : student ? t("No applications match this view.") : "No applications match this view."}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-left text-sm text-slate-800">
             <thead className="border-b text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">Application</th>
-                <th className="px-4 py-3">Applicant</th>
-                <th className="px-4 py-3">Scholarship</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">{student ? t("Application") : "Application"}</th>
+                <th className="px-4 py-3">{student ? t("Applicant") : "Applicant"}</th>
+                <th className="px-4 py-3">{student ? t("Scholarship") : "Scholarship"}</th>
+                <th className="px-4 py-3">{student ? t("Status") : "Status"}</th>
                 <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
@@ -2125,22 +2129,25 @@ function ScholarshipList({
   applications,
   loading,
   onApply,
+  role,
 }: any) {
+  const { t } = useStudentLanguage();
+  const student = role === "student";
   const applied = new Set(
     applications.map((a: Application) => a.scholarship?._id),
   );
   return (
     <Panel
-      title="Active scholarships"
-      subtitle="Published opportunities with future deadlines"
+      title={student ? t("Active scholarships") : "Active scholarships"}
+      subtitle={student ? t("Published opportunities with future deadlines") : "Published opportunities with future deadlines"}
     >
       {loading ? (
-        <p className="p-5">Loading...</p>
+        <p className="p-5">{student ? t("Loading...") : "Loading..."}</p>
       ) : (
         <div className="grid gap-4 p-5 lg:grid-cols-2">
           {scholarships.length === 0 ? (
             <p className="text-sm text-slate-500">
-              No active scholarships are available.
+              {student ? t("No active scholarships are available.") : "No active scholarships are available."}
             </p>
           ) : (
             scholarships.map((item: Scholarship) => (
@@ -2159,8 +2166,8 @@ function ScholarshipList({
                     "Scholarship opportunity for eligible students."}
                 </p>
                 <p className="mt-3 text-xs text-slate-500">
-                  Deadline {new Date(item.deadline).toLocaleDateString()} ·{" "}
-                  {item.requiredDocuments?.length ?? 0} required documents
+                  {student ? t("Deadline") : "Deadline"} {new Date(item.deadline).toLocaleDateString()} ·{" "}
+                  {item.requiredDocuments?.length ?? 0} {student ? t("required documents") : "required documents"}
                 </p>
                 <button
                   disabled={applied.has(item._id)}
@@ -2168,8 +2175,8 @@ function ScholarshipList({
                   className="mt-4 cursor-pointer rounded-xl bg-[#193b61] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {applied.has(item._id)
-                    ? "Application started"
-                    : "Start application"}
+                    ? student ? t("Application started") : "Application started"
+                    : student ? t("Start application") : "Start application"}
                 </button>
               </article>
             ))
