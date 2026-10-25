@@ -32,7 +32,10 @@ import {
   scholarshipApi,
 } from "@/lib/api";
 import AdminManagement from "@/components/admin-management";
-
+import {
+  StudentLanguageProvider,
+  useStudentLanguage,
+} from "@/lib/student-i18n";
 
 import {
   ResponsiveContainer,
@@ -47,8 +50,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-
-
 
 type Role = "student" | "staff" | "officer" | "director" | "admin";
 type User = {
@@ -175,8 +176,10 @@ const pageTitles: Record<string, string> = {
 const statusBadgeClasses: Record<string, string> = {
   Draft: "border-slate-200 bg-slate-100 text-slate-700",
   Submitted: "border-blue-200 bg-blue-50 text-blue-800",
-  "Under Department Verification": "border-violet-200 bg-violet-50 text-violet-800",
-  "Under Officer Verification": "border-indigo-200 bg-indigo-50 text-indigo-800",
+  "Under Department Verification":
+    "border-violet-200 bg-violet-50 text-violet-800",
+  "Under Officer Verification":
+    "border-indigo-200 bg-indigo-50 text-indigo-800",
   "Correction Required": "border-amber-200 bg-amber-50 text-amber-900",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-800",
   Rejected: "border-rose-200 bg-rose-50 text-rose-800",
@@ -241,10 +244,10 @@ export default function RealRolePortal() {
         mode === "register"
           ? await authApi.register(form)
           : await authApi.login({
-            email: form.email,
-            password: form.password,
-            expectedRole: role,
-          });
+              email: form.email,
+              password: form.password,
+              expectedRole: role,
+            });
       setUser(response.data.user);
       redirectForRole(response.data.user.role);
       if (mode === "register")
@@ -285,7 +288,11 @@ export default function RealRolePortal() {
         submit={submit}
       />
     );
-  return <Dashboard user={user} signOut={signOut} />;
+  return (
+    <StudentLanguageProvider enabled>
+      <Dashboard user={user} signOut={signOut} />
+    </StudentLanguageProvider>
+  );
 }
 
 function Login({
@@ -306,7 +313,7 @@ function Login({
       <div className="mx-auto grid min-h-[calc(100vh-3rem)] max-w-6xl items-center gap-8 lg:min-h-[calc(100vh-5rem)] lg:grid-cols-[1fr_440px] lg:gap-12">
         <section className="hidden lg:block">
           <Brand />
-          <h1 className="mt-10 max-w-xl text-5xl font-bold leading-tight tracking-tight text-[#193b61]">
+          <h1 className="mt-10 max-w-xl bg-gradient-to-r from-[#49a09d] to-[#5f2c82] bg-clip-text text-5xl font-bold leading-tight tracking-tight text-transparent">
             One secure place for every scholarship journey.
           </h1>
           <p className="mt-5 max-w-lg text-lg leading-8 text-slate-500">
@@ -321,7 +328,7 @@ function Login({
           <p className="mt-8 text-sm font-semibold text-teal-600">
             {mode === "login" ? "Welcome back" : "Student registration"}
           </p>
-          <h2 className="mt-2 text-3xl font-bold tracking-tight text-[#193b61]">
+          <h2 className="mt-2 text-3xl font-bold tracking-tight text-slate-800">
             {mode === "login"
               ? "Sign in to your workspace"
               : "Start your application journey"}
@@ -363,64 +370,91 @@ function Login({
               <label className="text-sm font-semibold text-slate-700">
                 Full name
                 <input
-                id="full-name"
-                required
-                autoComplete="name"
-                placeholder="Full name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+                  id="full-name"
+                  required
+                  autoComplete="name"
+                  placeholder="Full name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
                 />
               </label>
             )}
             {mode === "register" && (
               <label className="text-sm font-semibold text-slate-700">
-                Student ID <span className="font-normal text-slate-400">(optional)</span>
+                Student ID{" "}
+                <span className="font-normal text-slate-400">(optional)</span>
                 <input
-                id="student-id"
-                placeholder="Student ID (optional)"
-                value={form.studentId}
-                onChange={(e) =>
-                  setForm({ ...form, studentId: e.target.value })
-                }
-                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+                  id="student-id"
+                  placeholder="Student ID (optional)"
+                  value={form.studentId}
+                  onChange={(e) =>
+                    setForm({ ...form, studentId: e.target.value })
+                  }
+                  className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
                 />
               </label>
             )}
-            <label htmlFor="email" className="text-sm font-semibold text-slate-700">
+            <label
+              htmlFor="email"
+              className="text-sm font-semibold text-slate-700"
+            >
               Email address
-            <input
-              id="email"
-              autoComplete="email"
-              required
-              type="email"
-              placeholder="Email address"
-              value={form.email}
-              onChange={(e) => setForm({ ...form, email: e.target.value })}
-              className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
-            />
+              <input
+                id="email"
+                autoComplete="email"
+                required
+                type="email"
+                placeholder="Email address"
+                value={form.email}
+                onChange={(e) => setForm({ ...form, email: e.target.value })}
+                className="mt-2 min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 font-normal"
+              />
             </label>
-            <label htmlFor="password" className="text-sm font-semibold text-slate-700">
+            <label
+              htmlFor="password"
+              className="text-sm font-semibold text-slate-700"
+            >
               Password
               <span className="relative mt-2 block">
-            <input
-              id="password"
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              required
-              minLength={8}
-              type={showPassword ? "text" : "password"}
-              placeholder="Password"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-              className="min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 pr-12 font-normal"
-            />
-            <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label={showPassword ? "Hide password" : "Show password"}>
-              {showPassword ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-            </button>
+                <input
+                  id="password"
+                  autoComplete={
+                    mode === "login" ? "current-password" : "new-password"
+                  }
+                  required
+                  minLength={8}
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={form.password}
+                  onChange={(e) =>
+                    setForm({ ...form, password: e.target.value })
+                  }
+                  className="min-h-12 w-full rounded-xl border border-slate-200 px-3 py-3 pr-12 font-normal"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((value) => !value)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword ? (
+                    <EyeOff className="size-5" />
+                  ) : (
+                    <Eye className="size-5" />
+                  )}
+                </button>
               </span>
             </label>
-            <button disabled={submitting} className="min-h-12 cursor-pointer rounded-xl bg-[#0D9488] px-4 py-3 font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60">
-              {submitting ? "Securing your session…" : mode === "login" ? "Sign in securely" : "Create student account"}
+            <button
+              disabled={submitting}
+              className="min-h-12 cursor-pointer rounded-xl bg-[#0D9488] px-4 py-3 font-bold text-white transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {submitting
+                ? "Securing your session…"
+                : mode === "login"
+                  ? "Sign in securely"
+                  : "Create student account"}
             </button>
           </form>
           <button
@@ -441,6 +475,8 @@ function Login({
 const APP_PAGE_LIMIT = 20;
 
 function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
+  const languageContext = useStudentLanguage();
+  const t = languageContext.t;
   const [active, setActive] = useState("Overview"),
     [open, setOpen] = useState(false),
     [applications, setApplications] = useState<Application[]>([]),
@@ -453,7 +489,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     [error, setError] = useState(""),
     [message, setMessage] = useState("");
 
-  // ── Pagination state ──────────────────────────────────────────────────────
+  // ── Pagination state ───��──────────────────────────────────────────────────
   const [applPage, setApplPage] = useState(1);
   const [applStatus, setApplStatus] = useState("");
   const [applPagination, setApplPagination] = useState<Pagination | null>(null);
@@ -482,7 +518,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
         if (!silent) {
           setError(
             cause.response?.data?.message ??
-            "We could not load your latest workspace data.",
+              "We could not load your latest workspace data.",
           );
         }
       }
@@ -518,7 +554,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     } catch (cause: any) {
       setError(
         cause.response?.data?.message ??
-        "We could not load your latest workspace data.",
+          "We could not load your latest workspace data.",
       );
     } finally {
       setLoading(false);
@@ -593,7 +629,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
     } catch (cause: any) {
       setError(
         cause.response?.data?.message ??
-        "That action is not available for this role.",
+          "That action is not available for this role.",
       );
       return false;
     }
@@ -669,7 +705,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
         ? `Missing documents: ${data.missingTypes.join(", ")}`
         : data?.reasons?.length
           ? data.reasons.join(". ")
-          : data?.message ?? "Application submission failed.";
+          : (data?.message ?? "Application submission failed.");
       setError(errorMsg);
     }
   }
@@ -680,62 +716,193 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
 
   const cards: StatCardData[] = isStudent
     ? [
-        { title: "My applications", value: applications.length, detail: "All saved and submitted applications", icon: FileText, tone: "teal" },
-        { title: "Drafts", value: stats.drafts ?? 0, detail: "Applications still in progress", icon: FileCheck2, tone: "slate" },
-        { title: "Awaiting verification", value: stats.awaitingVerification ?? 0, detail: "Submitted for review", icon: ClipboardCheck, tone: "blue" },
-        { title: "Approved", value: stats.approved ?? 0, detail: "Applications approved", icon: CheckCircle2, tone: "green" },
-        { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Need your attention", icon: RefreshCw, tone: "amber" },
-        { title: "Available scholarships", value: stats.scholarships ?? scholarships.length, detail: "Open opportunities", icon: GraduationCap, tone: "indigo" },
+        {
+          title: "My applications",
+          value: applications.length,
+          detail: "All saved and submitted applications",
+          icon: FileText,
+          tone: "teal",
+        },
+        {
+          title: "Drafts",
+          value: stats.drafts ?? 0,
+          detail: "Applications still in progress",
+          icon: FileCheck2,
+          tone: "slate",
+        },
+        {
+          title: "Awaiting verification",
+          value: stats.awaitingVerification ?? 0,
+          detail: "Submitted for review",
+          icon: ClipboardCheck,
+          tone: "blue",
+        },
+        {
+          title: "Approved",
+          value: stats.approved ?? 0,
+          detail: "Applications approved",
+          icon: CheckCircle2,
+          tone: "green",
+        },
+        {
+          title: "Correction requests",
+          value: stats.correctionRequired ?? 0,
+          detail: "Need your attention",
+          icon: RefreshCw,
+          tone: "amber",
+        },
+        {
+          title: "Available scholarships",
+          value: stats.scholarships ?? scholarships.length,
+          detail: "Open opportunities",
+          icon: GraduationCap,
+          tone: "indigo",
+        },
       ]
     : user.role === "staff"
       ? [
-          { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "Across all scholarship cycles", icon: FileText, tone: "teal" },
-          { title: "New submissions", value: stats.byStatus?.Submitted ?? 0, detail: "Ready for department review", icon: ClipboardCheck, tone: "blue" },
-          { title: "Department verification", value: stats.byStatus?.["Under Department Verification"] ?? 0, detail: "Currently in your queue", icon: FileCheck2, tone: "violet" },
-          { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Applications needing updates", icon: RefreshCw, tone: "amber" },
+          {
+            title: "Total applications",
+            value: stats.totalApplications ?? applications.length,
+            detail: "Across all scholarship cycles",
+            icon: FileText,
+            tone: "teal",
+          },
+          {
+            title: "New submissions",
+            value: stats.byStatus?.Submitted ?? 0,
+            detail: "Ready for department review",
+            icon: ClipboardCheck,
+            tone: "blue",
+          },
+          {
+            title: "Department verification",
+            value: stats.byStatus?.["Under Department Verification"] ?? 0,
+            detail: "Currently in your queue",
+            icon: FileCheck2,
+            tone: "violet",
+          },
+          {
+            title: "Correction requests",
+            value: stats.correctionRequired ?? 0,
+            detail: "Applications needing updates",
+            icon: RefreshCw,
+            tone: "amber",
+          },
         ]
       : user.role === "officer"
         ? [
-            { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "All submitted applications", icon: FileText, tone: "teal" },
-            { title: "Awaiting verification", value: stats.byStatus?.["Under Department Verification"] ?? 0, detail: "Pending department handoff", icon: ClipboardCheck, tone: "blue" },
-            { title: "Awaiting final decision", value: stats.byStatus?.["Under Officer Verification"] ?? 0, detail: "Ready for officer review", icon: FileCheck2, tone: "violet" },
-            { title: "Correction requests", value: stats.correctionRequired ?? 0, detail: "Returned to applicants", icon: RefreshCw, tone: "amber" },
+            {
+              title: "Total applications",
+              value: stats.totalApplications ?? applications.length,
+              detail: "All submitted applications",
+              icon: FileText,
+              tone: "teal",
+            },
+            {
+              title: "Awaiting verification",
+              value: stats.byStatus?.["Under Department Verification"] ?? 0,
+              detail: "Pending department handoff",
+              icon: ClipboardCheck,
+              tone: "blue",
+            },
+            {
+              title: "Awaiting final decision",
+              value: stats.byStatus?.["Under Officer Verification"] ?? 0,
+              detail: "Ready for officer review",
+              icon: FileCheck2,
+              tone: "violet",
+            },
+            {
+              title: "Correction requests",
+              value: stats.correctionRequired ?? 0,
+              detail: "Returned to applicants",
+              icon: RefreshCw,
+              tone: "amber",
+            },
           ]
         : user.role === "director"
           ? [
-              { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "Current application volume", icon: FileText, tone: "teal" },
-              { title: "Awaiting final decision", value: stats.byStatus?.["Under Officer Verification"] ?? 0, detail: "Pending your decision", icon: ClipboardCheck, tone: "blue" },
-              { title: "Approved", value: stats.approved ?? 0, detail: "Successful decisions", icon: CheckCircle2, tone: "green" },
-              { title: "Rejected", value: stats.rejected ?? 0, detail: "Decisions not approved", icon: X, tone: "rose" },
+              {
+                title: "Total applications",
+                value: stats.totalApplications ?? applications.length,
+                detail: "Current application volume",
+                icon: FileText,
+                tone: "teal",
+              },
+              {
+                title: "Awaiting final decision",
+                value: stats.byStatus?.["Under Officer Verification"] ?? 0,
+                detail: "Pending your decision",
+                icon: ClipboardCheck,
+                tone: "blue",
+              },
+              {
+                title: "Approved",
+                value: stats.approved ?? 0,
+                detail: "Successful decisions",
+                icon: CheckCircle2,
+                tone: "green",
+              },
+              {
+                title: "Rejected",
+                value: stats.rejected ?? 0,
+                detail: "Decisions not approved",
+                icon: X,
+                tone: "rose",
+              },
             ]
           : [
-              { title: "Total applications", value: stats.totalApplications ?? applications.length, detail: "System-wide applications", icon: FileText, tone: "teal" },
-              { title: "Pending review", value: stats.pending ?? 0, detail: "Across active queues", icon: ClipboardCheck, tone: "blue" },
-              { title: "Approved", value: stats.approved ?? 0, detail: "Approved applications", icon: CheckCircle2, tone: "green" },
-              { title: "Rejected", value: stats.rejected ?? 0, detail: "Rejected applications", icon: X, tone: "rose" },
+              {
+                title: "Total applications",
+                value: stats.totalApplications ?? applications.length,
+                detail: "System-wide applications",
+                icon: FileText,
+                tone: "teal",
+              },
+              {
+                title: "Pending review",
+                value: stats.pending ?? 0,
+                detail: "Across active queues",
+                icon: ClipboardCheck,
+                tone: "blue",
+              },
+              {
+                title: "Approved",
+                value: stats.approved ?? 0,
+                detail: "Approved applications",
+                icon: CheckCircle2,
+                tone: "green",
+              },
+              {
+                title: "Rejected",
+                value: stats.rejected ?? 0,
+                detail: "Rejected applications",
+                icon: X,
+                tone: "rose",
+              },
             ];
-
-
 
   const statusColors: Record<string, string> = {
     Draft: "#94a3b8",
-    Submitted: "#3b82f6",
-    "Under Department Verification": "#8b5cf6",
-    "Under Officer Verification": "#f59e0b",
-    "Correction Required": "#f97316",
-    Approved: "#10b981",
-    Rejected: "#ef4444",
+    Submitted: "#2563eb",
+    "Under Department Verification": "#6366f1",
+    "Under Officer Verification": "#0f766e",
+    "Correction Required": "#b45309",
+    Approved: "#047857",
+    Rejected: "#be123c",
   };
 
   const statusChartData = Object.entries(stats.byStatus ?? {})
     .map(([name, value]) => ({
-      name,
+      name: isStudent ? t(name) : name,
       value: Number(value),
     }))
     .filter((item) => item.value > 0);
 
-
-  const unreadCount = notifications.filter((notification) => !notification.read).length;
+  const unreadCount = notifications.filter(
+    (notification) => !notification.read,
+  ).length;
   return (
     <div className="min-h-screen bg-background text-foreground">
       {open && (
@@ -764,15 +931,22 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               {user.name.slice(0, 1).toUpperCase()}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-              <p className="mt-0.5 truncate text-xs text-slate-400">{labels[user.role]}</p>
+              <p className="truncate text-sm font-semibold text-white">
+                {user.name}
+              </p>
+              <p className="mt-0.5 truncate text-xs text-slate-400">
+                {labels[user.role]}
+              </p>
             </div>
           </div>
         </div>
         <div className="px-5 pb-2 pt-7 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-          Workspace
+          {t("Workspace")}
         </div>
-        <nav aria-label={`${labels[user.role]} navigation`} className="flex flex-1 flex-col gap-1 px-3">
+        <nav
+          aria-label={`${labels[user.role]} navigation`}
+          className="flex flex-1 flex-col gap-1 px-3"
+        >
           {navByRole[user.role].map((item) => (
             <button
               key={item}
@@ -784,11 +958,15 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               }}
               className={`group relative flex cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-semibold transition ${active === item ? "bg-teal-600 text-white shadow-lg shadow-teal-950/20" : "text-slate-400 hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"}`}
             >
-              {active === item && <span className="absolute -left-3 h-7 w-1 rounded-r-full bg-teal-300" />}
+              {active === item && (
+                <span className="absolute -left-3 h-7 w-1 rounded-r-full bg-teal-300" />
+              )}
               <NavIcon item={item} />
-              <span className="truncate">{item}</span>
+              <span className="truncate">{isStudent ? t(item) : item}</span>
               {item === "Notifications" && unreadCount > 0 && (
-                <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active === item ? "bg-white/20 text-white" : "bg-rose-400 text-white"}`}>
+                <span
+                  className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-bold ${active === item ? "bg-white/20 text-white" : "bg-rose-400 text-white"}`}
+                >
                   {unreadCount}
                 </span>
               )}
@@ -801,7 +979,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"
           >
             <LogOut className="size-5" />
-            Sign out
+            {t("Sign out")}
           </button>
         </div>
       </aside>
@@ -820,11 +998,19 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               <div className="mb-1 hidden items-center gap-2 text-xs font-semibold text-slate-400 sm:flex">
                 <span>ScholarFlow</span>
                 <span aria-hidden="true">/</span>
-                <span>{labels[user.role]}</span>
+                <span>
+                  {isStudent ? t(labels[user.role]) : labels[user.role]}
+                </span>
                 <span aria-hidden="true">/</span>
-                <span className="text-slate-600">{pageTitles[active] ?? active}</span>
+                <span className="text-slate-600">
+                  {isStudent
+                    ? t(pageTitles[active] ?? active)
+                    : (pageTitles[active] ?? active)}
+                </span>
               </div>
-              <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">{readablePageTitle(user.role, active)}</h1>
+              <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                {t(readablePageTitle(user.role, active))}
+              </h1>
             </div>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
@@ -832,23 +1018,51 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             <button
               onClick={() => setActive("Notifications")}
               className="relative cursor-pointer rounded-xl p-2.5 text-slate-500 transition hover:bg-teal-50 hover:text-teal-700 focus-visible:bg-teal-50"
-              aria-label={unreadCount ? `${unreadCount} unread notifications` : "Notifications"}
+              aria-label={
+                unreadCount
+                  ? `${unreadCount} unread notifications`
+                  : "Notifications"
+              }
             >
               <Bell className="size-5" />
-              {unreadCount > 0 && <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />}
+              {unreadCount > 0 && (
+                <span className="absolute right-2 top-2 size-2 rounded-full bg-rose-500 ring-2 ring-white" />
+              )}
             </button>
-            
-          
+
+            {languageContext && (
+              <label className="sr-only" htmlFor="portal-language">
+                Language
+              </label>
+            )}
+            {languageContext && (
+              <select
+                id="portal-language"
+                aria-label="Language / भाषा"
+                value={languageContext.language}
+                onChange={(event) =>
+                  languageContext.setLanguage(event.target.value as "en" | "hi")
+                }
+                className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700"
+              >
+                <option value="en">English</option>
+                <option value="hi">हिन्दी</option>
+              </select>
+            )}
             <div className="ml-1 hidden items-center gap-2 border-l border-slate-200 pl-3 sm:flex">
-              <span className="flex size-9 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">{user.name.slice(0, 1).toUpperCase()}</span>
+              <span className="flex size-9 items-center justify-center rounded-full bg-teal-100 text-sm font-bold text-teal-700">
+                {user.name.slice(0, 1).toUpperCase()}
+              </span>
               <div className="hidden lg:block">
-                <p className="max-w-32 truncate text-sm font-semibold text-slate-800">{user.name}</p>
-                <p className="text-xs text-slate-500">{labels[user.role]}</p>
+                <p className="max-w-32 truncate text-sm font-semibold text-slate-800">
+                  {user.name}
+                </p>
+                <p className="text-xs text-slate-500">{t(labels[user.role])}</p>
               </div>
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-7xl space-y-6 p-5 sm:p-8">
+        <main className="mx-auto max-w-7xl space-y-6 bg-[#F8FAFC] p-5 sm:p-8">
           {error && (
             <div
               role="alert"
@@ -869,12 +1083,23 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             <>
               <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                 <div>
-                  <p className="text-sm font-semibold text-teal-700">{labels[user.role]} workspace</p>
+                  <p className="text-sm font-semibold text-teal-700">
+                    {isStudent ? t(labels[user.role]) : labels[user.role]}{" "}
+                    {isStudent ? t("Workspace") : "workspace"}
+                  </p>
                   <h2 className="mt-1 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-                    Good to see you, {user.name.split(" ")[0]}.
+                    {isStudent
+                      ? t("Good to see you, {name}.", {
+                          name: user.name.split(" ")[0],
+                        })
+                      : `Good to see you, ${user.name.split(" ")[0]}.`}
                   </h2>
                   <p className="mt-2 max-w-2xl text-sm text-slate-500 sm:text-base">
-                    Here is the latest view of your scholarship activity and work queue.
+                    {isStudent
+                      ? t(
+                          "Here is the latest view of your scholarship activity and work queue.",
+                        )
+                      : "Here is the latest view of your scholarship activity and work queue."}
                   </p>
                 </div>
                 <button
@@ -883,21 +1108,33 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                   className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:text-teal-700"
                 >
                   <RefreshCw className="size-4" />
-                  Refresh data
+                  {t("Refresh data")}
                 </button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {cards.map((card) => (
-                  <StatCard key={card.title} card={card} loading={loading} />
+                  <StatCard
+                    key={card.title}
+                    card={
+                      isStudent
+                        ? {
+                            ...card,
+                            title: t(card.title),
+                            detail: t(card.detail),
+                          }
+                        : card
+                    }
+                    loading={loading}
+                  />
                 ))}
               </div>
 
               <div className="grid gap-6 xl:grid-cols-2">
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
-                    <h2 className="text-lg font-bold text-[#193b61]">
+                    <h2 className="text-lg font-bold text-slate-800">
                       {user.role === "student"
-                        ? "My Application Status"
+                        ? t("My Application Status")
                         : user.role === "staff"
                           ? "Application Verification Overview"
                           : user.role === "officer"
@@ -908,7 +1145,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
                       {user.role === "student"
-                        ? "Track the status of your scholarship applications"
+                        ? t("Track the status of your scholarship applications")
                         : user.role === "staff"
                           ? "Monitor application statuses and department verification"
                           : user.role === "officer"
@@ -947,19 +1184,29 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                             />
                           ))}
                         </Pie>
-                        <Tooltip />
-                        <Legend />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            backgroundColor: "#ffffff",
+                            color: "#0f172a",
+                            boxShadow: "0 8px 24px rgb(15 23 42 / 0.10)",
+                          }}
+                          labelStyle={{ color: "#334155", fontWeight: 700 }}
+                        />
+                        <Legend
+                          wrapperStyle={{ color: "#475569", fontSize: 12 }}
+                        />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
                 </section>
 
-
                 <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                   <div className="mb-5">
-                    <h2 className="text-lg font-bold text-[#193b61]">
+                    <h2 className="text-lg font-bold text-slate-800">
                       {user.role === "student"
-                        ? "My Monthly Applications"
+                        ? t("My Monthly Applications")
                         : user.role === "staff"
                           ? "Monthly Verification Workload"
                           : user.role === "officer"
@@ -987,17 +1234,40 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                         data={
                           user.role === "student"
                             ? stats.monthlyTrend
-                            : stats.roleActivityTrend ?? stats.monthlyTrend
+                            : (stats.roleActivityTrend ?? stats.monthlyTrend)
                         }
                       >
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis dataKey="month" />
-                        <YAxis allowDecimals={false} />
-                        <Tooltip />
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fill: "#64748b", fontSize: 12 }}
+                          axisLine={{ stroke: "#cbd5e1" }}
+                          tickLine={{ stroke: "#cbd5e1" }}
+                        />
+                        <YAxis
+                          allowDecimals={false}
+                          tick={{ fill: "#64748b", fontSize: 12 }}
+                          axisLine={{ stroke: "#cbd5e1" }}
+                          tickLine={{ stroke: "#cbd5e1" }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 12,
+                            border: "1px solid #cbd5e1",
+                            backgroundColor: "#ffffff",
+                            color: "#0f172a",
+                            boxShadow: "0 8px 24px rgb(15 23 42 / 0.10)",
+                          }}
+                          labelStyle={{ color: "#334155", fontWeight: 700 }}
+                        />
                         <Line
                           type="monotone"
                           dataKey="applications"
-                          name={user.role === "student" ? "Submitted applications" : "Verification / decision actions"}
+                          name={
+                            user.role === "student"
+                              ? "Submitted applications"
+                              : "Verification / decision actions"
+                          }
                           stroke="#0d9488"
                           strokeWidth={3}
                           dot={{ r: 4 }}
@@ -1007,7 +1277,6 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                     </ResponsiveContainer>
                   )}
                 </section>
-
               </div>
 
               <ApplicationTable
@@ -1026,6 +1295,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               applications={applications}
               loading={loading}
               onApply={apply}
+              role={user.role}
             />
           )}
           {active === "Documents" && isStudent && (
@@ -1043,7 +1313,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               user={user}
               onSaved={async () => {
                 await loadData();
-                setMessage("Profile saved successfully.");
+                setMessage(t("Profile saved successfully."));
               }}
             />
           )}
@@ -1062,24 +1332,28 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             (!isStudent &&
               active !== "Overview" &&
               active !== "Scholarships")) && (
-              <ApplicationTable
-                applications={filtered}
-                loading={loading}
-                role={user.role}
-                onStatus={handleStatusClick}
-                onSubmitApplication={submitApplication}
-                pagination={applPagination}
-                currentPage={applPage}
-                currentStatus={applStatus}
-                onPageChange={(p: number) => setApplPage(p)}
-                onStatusChange={(s: string) => {
-                  setApplStatus(s);
-                  setApplPage(1);
-                }}
-              />
-            )}
+            <ApplicationTable
+              applications={filtered}
+              loading={loading}
+              role={user.role}
+              onStatus={handleStatusClick}
+              onSubmitApplication={submitApplication}
+              pagination={applPagination}
+              currentPage={applPage}
+              currentStatus={applStatus}
+              onPageChange={(p: number) => setApplPage(p)}
+              onStatusChange={(s: string) => {
+                setApplStatus(s);
+                setApplPage(1);
+              }}
+            />
+          )}
           {user.role === "admin" && active === "User management" && (
             <AdminManagement />
+          )}
+
+          {user.role === "admin" && active === "Audit logs" && (
+            <AdminManagement auditOnly />
           )}
         </main>
       </div>
@@ -1088,7 +1362,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
           <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="text-lg font-bold text-[#193b61]">
+              <h3 className="text-lg font-bold text-slate-800">
                 {remarkDialog.nextStatus === "Correction Required"
                   ? "Request Application Correction"
                   : "Reject Application"}
@@ -1153,10 +1427,11 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 type="button"
                 disabled={remarkDialog.submitting}
                 onClick={submitRemarkDialog}
-                className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${remarkDialog.nextStatus === "Correction Required"
-                  ? "bg-amber-600 hover:bg-amber-700"
-                  : "bg-rose-600 hover:bg-rose-700"
-                  }`}
+                className={`cursor-pointer rounded-xl px-4 py-2 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-50 ${
+                  remarkDialog.nextStatus === "Correction Required"
+                    ? "bg-amber-600 hover:bg-amber-700"
+                    : "bg-rose-600 hover:bg-rose-700"
+                }`}
               >
                 {remarkDialog.submitting
                   ? "Saving..."
@@ -1179,6 +1454,7 @@ function Documents({
   setError,
   setMessage,
 }: any) {
+  const { t } = useStudentLanguage();
   const [type, setType] = useState("marksheet"),
     [file, setFile] = useState<File | null>(null),
     [busy, setBusy] = useState(false);
@@ -1193,10 +1469,10 @@ function Documents({
   ];
 
   async function upload() {
-    if (!file) return setError("Choose a document first.");
+    if (!file) return setError(t("Choose a document first."));
 
     if (file.size > 10 * 1024 * 1024) {
-      return setError("Files must be 10 MB or smaller.");
+      return setError(t("Files must be 10 MB or smaller."));
     }
 
     const data = new FormData();
@@ -1212,14 +1488,13 @@ function Documents({
 
       // Step 2: Find an editable application
       const draft = applications.find((app: Application) =>
-        ["Draft", "Correction Required"].includes(app.status)
+        ["Draft", "Correction Required"].includes(app.status),
       );
 
       // Step 3: Attach uploaded document to that application
       if (draft) {
-        const existingIds = (draft.documents ?? []).map(
-          (doc: any) =>
-            typeof doc === "string" ? doc : doc._id
+        const existingIds = (draft.documents ?? []).map((doc: any) =>
+          typeof doc === "string" ? doc : doc._id,
         );
 
         const documentIds = [
@@ -1231,11 +1506,11 @@ function Documents({
         });
 
         setMessage(
-          `Document uploaded and attached to ${draft.scholarship?.name ?? "your application"}.`
+          `Document uploaded and attached to ${draft.scholarship?.name ?? "your application"}.`,
         );
       } else {
         setMessage(
-          "Document uploaded successfully, but no editable application was found. It has not been attached."
+          "Document uploaded successfully, but no editable application was found. It has not been attached.",
         );
       }
 
@@ -1243,7 +1518,8 @@ function Documents({
       await onChanged();
     } catch (cause: any) {
       setError(
-        cause.response?.data?.message ?? "Document upload or attachment failed."
+        cause.response?.data?.message ??
+          "Document upload or attachment failed.",
       );
     } finally {
       setBusy(false);
@@ -1253,8 +1529,8 @@ function Documents({
   return (
     <div className="space-y-6">
       <Panel
-        title="Upload documents"
-        subtitle="PDF, JPG, JPEG, or PNG up to 10 MB"
+        title={t("Upload documents")}
+        subtitle={t("PDF, JPG, JPEG, or PNG up to 10 MB")}
       >
         <div
           onDragOver={(e) => e.preventDefault()}
@@ -1265,7 +1541,9 @@ function Documents({
           className="rounded-2xl border-2 border-dashed border-teal-200 bg-teal-50/50 p-8 text-center"
         >
           <Upload className="mx-auto text-teal-700" />
-          <p className="mt-2 font-semibold">Drop a file here or choose one</p>
+          <p className="mt-2 font-semibold">
+            {t("Drop a file here or choose one")}
+          </p>
           <input
             type="file"
             accept="application/pdf,image/jpeg,image/png"
@@ -1294,19 +1572,19 @@ function Documents({
               onClick={upload}
               className="cursor-pointer rounded-xl bg-[#193b61] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
             >
-              {busy ? "Uploading..." : "Upload"}
+              {busy ? t("Uploading...") : t("Upload")}
             </button>
           </div>
         </div>
       </Panel>
       <Panel
-        title="Your documents"
-        subtitle="Stored privately against your student account"
+        title={t("Your documents")}
+        subtitle={t("Stored privately against your student account")}
       >
         <div className="divide-y divide-slate-100">
           {documents.length === 0 ? (
             <p className="p-5 text-sm text-slate-500">
-              No documents uploaded yet.
+              {t("No documents uploaded yet.")}
             </p>
           ) : (
             documents.map((doc: DocumentRecord) => (
@@ -1338,12 +1616,12 @@ function Documents({
                     onClick={async () => {
                       try {
                         await documentApi.remove(doc._id);
-                        setMessage("Document deleted successfully.");
+                        setMessage(t("Document deleted successfully."));
                         await onChanged();
                       } catch (cause: any) {
                         setError(
                           cause.response?.data?.message ??
-                          "Unable to delete document.",
+                            "Unable to delete document.",
                         );
                       }
                     }}
@@ -1363,13 +1641,13 @@ function Documents({
   );
 }
 function RequiredDocuments({ applications, documents }: any) {
-
+  const { t } = useStudentLanguage();
   const available = new Set(documents.map((d: DocumentRecord) => d.type));
 
   return (
     <Panel
-      title="Application checklist"
-      subtitle="Required documents are checked by the server at submission"
+      title={t("Application checklist")}
+      subtitle={t("Required documents are checked by the server at submission")}
     >
       <div className="divide-y divide-slate-100">
         {applications
@@ -1387,7 +1665,7 @@ function RequiredDocuments({ applications, documents }: any) {
                     key={required}
                     className={`rounded-full px-3 py-1 text-xs font-semibold ${available.has(required) ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}
                   >
-                    {available.has(required) ? "Ready" : "Missing"}:{" "}
+                    {available.has(required) ? t("Ready") : t("Missing")}:{" "}
                     {required.replaceAll("-", " ")}
                   </span>
                 ))}
@@ -1399,6 +1677,7 @@ function RequiredDocuments({ applications, documents }: any) {
   );
 }
 function ProfileEditor({ profile, user, onSaved }: any) {
+  const { t } = useStudentLanguage();
   const [data, setData] = useState(profile);
   useEffect(() => setData(profile), [profile]);
   async function save(e: FormEvent) {
@@ -1416,8 +1695,8 @@ function ProfileEditor({ profile, user, onSaved }: any) {
   ];
   return (
     <Panel
-      title="My profile"
-      subtitle="Keep your eligibility information current"
+      title={t("My profile")}
+      subtitle={t("Keep your eligibility information current")}
     >
       <form onSubmit={save} className="grid gap-4 p-5 sm:grid-cols-2">
         <div className="sm:col-span-2 rounded-xl bg-slate-50 p-4">
@@ -1429,7 +1708,7 @@ function ProfileEditor({ profile, user, onSaved }: any) {
         </div>
         {fields.map(([key, label, type]) => (
           <label key={key} className="text-sm font-semibold">
-            {label}
+            {t(label)}
             <input
               required={[
                 "course",
@@ -1452,7 +1731,7 @@ function ProfileEditor({ profile, user, onSaved }: any) {
           </label>
         ))}
         <button className="cursor-pointer rounded-xl bg-[#193b61] px-4 py-3 font-bold text-white sm:col-span-2">
-          Save profile
+          {t("Save profile")}
         </button>
       </form>
     </Panel>
@@ -1465,15 +1744,16 @@ function Notifications({
   items: Notification[];
   onRead: (id: string) => void;
 }) {
+  const { t } = useStudentLanguage();
   return (
     <Panel
-      title="Notifications"
-      subtitle="Application events and correction requests"
+      title={t("Notifications")}
+      subtitle={t("Application events and correction requests")}
     >
       <div className="divide-y divide-slate-100">
         {items.length === 0 ? (
           <p className="p-5 text-sm text-slate-500">
-            You have no notifications.
+            {t("You have no notifications.")}
           </p>
         ) : (
           items.map((item: Notification) => (
@@ -1493,7 +1773,7 @@ function Notifications({
                   onClick={() => onRead(item._id as string)}
                   className="cursor-pointer text-xs font-bold text-teal-700 hover:underline"
                 >
-                  Mark read
+                  {t("Mark read")}
                 </button>
               )}
             </div>
@@ -1524,7 +1804,6 @@ const STAFF_STATUS_FILTER_OPTIONS = [
   },
   { value: "Correction Required", label: "Correction Required" },
 ];
-
 
 const OFFICER_STATUS_FILTER_OPTIONS = [
   { value: "", label: "All statuses" },
@@ -1563,8 +1842,9 @@ function ApplicationTable({
   onStatusChange,
   isOverviewSummary,
 }: any) {
+  const { t } = useStudentLanguage();
   const showControls = !isOverviewSummary;
-
+  const student = role === "student";
 
   const statusOptions =
     role === "staff"
@@ -1581,17 +1861,21 @@ function ApplicationTable({
     <Panel
       title={
         isOverviewSummary
-          ? "Recent applications"
+          ? student
+            ? t("Recent applications")
+            : "Recent applications"
           : role === "student"
-            ? "My applications"
-            : "Application workflow"
+            ? t("My applications")
+            : t("Application workflow")
       }
       subtitle={
         isOverviewSummary
-          ? "Latest 5 records — go to My applications for the full list"
+          ? "Latest 5 records"
           : pagination
-            ? `Page ${pagination.page} of ${pagination.totalPages} · ${pagination.total} total`
-            : "Live records from the scholarship system"
+            ? `${t("Page")} ${pagination.page} ${t("of")} ${pagination.totalPages} · ${pagination.total} ${t("total")}`
+            : student
+              ? t("Live records from the scholarship system")
+              : "Live records from the scholarship system"
       }
     >
       {/* ── Status filter + pagination header ── */}
@@ -1602,11 +1886,11 @@ function ApplicationTable({
             value={currentStatus ?? ""}
             onChange={(e) => onStatusChange?.(e.target.value)}
             className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-semibold text-slate-700 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600"
-            aria-label="Filter by status"
+            aria-label={student ? t("Filter by status") : "Filter by status"}
           >
             {statusOptions.map((opt) => (
               <option key={opt.value} value={opt.value}>
-                {opt.label}
+                {student ? t(opt.label) : opt.label}
               </option>
             ))}
           </select>
@@ -1615,17 +1899,19 @@ function ApplicationTable({
             <div className="flex items-center gap-2 text-sm">
               <span className="text-slate-500">
                 {pagination.total === 0
-                  ? "No results"
+                  ? student
+                    ? t("No results")
+                    : "No results"
                   : `${(pagination.page - 1) * pagination.limit + 1}–${Math.min(
-                    pagination.page * pagination.limit,
-                    pagination.total,
-                  )} of ${pagination.total}`}
+                      pagination.page * pagination.limit,
+                      pagination.total,
+                    )} of ${pagination.total}`}
               </span>
               <button
                 onClick={() => onPageChange?.(pagination.page - 1)}
                 disabled={!pagination.hasPrev}
                 className="cursor-pointer rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-                aria-label="Previous page"
+                aria-label={student ? t("Previous page") : "Previous page"}
               >
                 ← Prev
               </button>
@@ -1651,17 +1937,27 @@ function ApplicationTable({
         <p className="p-5 text-sm text-slate-500">
           {currentStatus
             ? `No applications with status "${currentStatus}".`
-            : "No applications match this view."}
+            : student
+              ? t("No applications match this view.")
+              : "No applications match this view."}
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-left text-sm text-slate-800">
             <thead className="border-b text-xs uppercase text-slate-500">
               <tr>
-                <th className="px-4 py-3">Application</th>
-                <th className="px-4 py-3">Applicant</th>
-                <th className="px-4 py-3">Scholarship</th>
-                <th className="px-4 py-3">Status</th>
+                <th className="px-4 py-3">
+                  {student ? t("Application") : "Application"}
+                </th>
+                <th className="px-4 py-3">
+                  {student ? t("Applicant") : "Applicant"}
+                </th>
+                <th className="px-4 py-3">
+                  {student ? t("Scholarship") : "Scholarship"}
+                </th>
+                <th className="px-4 py-3">
+                  {student ? t("Status") : "Status"}
+                </th>
                 <th className="px-4 py-3">Action</th>
               </tr>
             </thead>
@@ -1678,7 +1974,9 @@ function ApplicationTable({
                     {item.scholarship?.name || "Scholarship"}
                   </td>
                   <td className="px-4 py-4">
-                    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusBadgeClasses[item.status] ?? "border-slate-200 bg-slate-100 text-slate-700"}`}>
+                    <span
+                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-bold ${statusBadgeClasses[item.status] ?? "border-slate-200 bg-slate-100 text-slate-700"}`}
+                    >
                       {item.status}
                     </span>
                     {item.remarks && (
@@ -1719,18 +2017,19 @@ function ApplicationTable({
                             Verify
                           </button>
                         )}
-                        {["Submitted", "Under Department Verification"].includes(
-                          item.status,
-                        ) && (
-                            <button
-                              onClick={() =>
-                                onStatus(item._id, "Correction Required")
-                              }
-                              className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
-                            >
-                              Correction
-                            </button>
-                          )}
+                        {[
+                          "Submitted",
+                          "Under Department Verification",
+                        ].includes(item.status) && (
+                          <button
+                            onClick={() =>
+                              onStatus(item._id, "Correction Required")
+                            }
+                            className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
+                          >
+                            Correction
+                          </button>
+                        )}
                       </div>
                     )}
 
@@ -1750,40 +2049,7 @@ function ApplicationTable({
                           "Under Department Verification",
                           "Under Officer Verification",
                         ].includes(item.status) && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  onStatus(item._id, "Correction Required")
-                                }
-                                className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
-                              >
-                                Correction
-                              </button>
-                              <button
-                                onClick={() =>
-                                  onStatus(item._id, "Rejected")
-                                }
-                                className="cursor-pointer rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
-                              >
-                                Reject
-                              </button>
-                            </>
-                          )}
-                      </div>
-                    )}
-
-                    {role === "director" && (
-                      <div className="flex flex-wrap gap-2">
-                        {item.status === "Under Officer Verification" && (
                           <>
-                            <button
-                              onClick={() =>
-                                onStatus(item._id, "Approved")
-                              }
-                              className="cursor-pointer rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
-                            >
-                              Approve
-                            </button>
                             <button
                               onClick={() =>
                                 onStatus(item._id, "Correction Required")
@@ -1793,10 +2059,29 @@ function ApplicationTable({
                               Correction
                             </button>
                             <button
-                              onClick={() =>
-                                onStatus(item._id, "Rejected")
-                              }
+                              onClick={() => onStatus(item._id, "Rejected")}
                               className="cursor-pointer rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+
+                    {role === "director" && (
+                      <div className="flex flex-wrap gap-2">
+                        {item.status === "Under Officer Verification" && (
+                          <>
+                            <button
+                              onClick={() => onStatus(item._id, "Approved")}
+                              className="cursor-pointer rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => onStatus(item._id, "Rejected")}
+                              className="cursor-pointer rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
                             >
                               Reject
                             </button>
@@ -1813,63 +2098,58 @@ function ApplicationTable({
                           "Under Officer Verification",
                           "Correction Required",
                         ].includes(item.status) && (
-                            <>
+                          <>
+                            <button
+                              onClick={() => onStatus(item._id, "Approved")}
+                              className="cursor-pointer rounded-lg bg-green-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => onStatus(item._id, "Rejected")}
+                              className="cursor-pointer rounded-lg bg-red-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-400"
+                            >
+                              Reject
+                            </button>
+                            {item.status !== "Correction Required" && (
                               <button
                                 onClick={() =>
-                                  onStatus(item._id, "Approved")
+                                  onStatus(item._id, "Correction Required")
                                 }
-                                className="cursor-pointer rounded-lg bg-emerald-50 px-2.5 py-1 text-xs font-bold text-emerald-700 hover:bg-emerald-100"
+                                className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 transition-colors hover:bg-amber-100"
                               >
-                                Approve
+                                Correction
                               </button>
+                            )}
+                            {item.status !==
+                              "Under Department Verification" && (
                               <button
                                 onClick={() =>
-                                  onStatus(item._id, "Rejected")
+                                  onStatus(
+                                    item._id,
+                                    "Under Department Verification",
+                                  )
                                 }
-                                className="cursor-pointer rounded-lg bg-rose-50 px-2.5 py-1 text-xs font-bold text-rose-700 hover:bg-rose-100"
+                                className="cursor-pointer rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100"
                               >
-                                Reject
+                                To Dept
                               </button>
-                              {item.status !== "Correction Required" && (
-                                <button
-                                  onClick={() =>
-                                    onStatus(item._id, "Correction Required")
-                                  }
-                                  className="cursor-pointer rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-bold text-amber-700 hover:bg-amber-100"
-                                >
-                                  Correction
-                                </button>
-                              )}
-                              {item.status !==
-                                "Under Department Verification" && (
-                                  <button
-                                    onClick={() =>
-                                      onStatus(
-                                        item._id,
-                                        "Under Department Verification",
-                                      )
-                                    }
-                                    className="cursor-pointer rounded-lg bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700 hover:bg-blue-100"
-                                  >
-                                    To Dept
-                                  </button>
-                                )}
-                              {item.status !==
-                                "Under Officer Verification" && (
-                                  <button
-                                    onClick={() =>
-                                      onStatus(
-                                        item._id,
-                                        "Under Officer Verification",
-                                      )
-                                    }
-                                    className="cursor-pointer rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100"
-                                  >
-                                    To Officer
-                                  </button>
-                                )}
-                            </>
-                          )}
+                            )}
+                            {item.status !== "Under Officer Verification" && (
+                              <button
+                                onClick={() =>
+                                  onStatus(
+                                    item._id,
+                                    "Under Officer Verification",
+                                  )
+                                }
+                                className="cursor-pointer rounded-lg bg-teal-50 px-2.5 py-1 text-xs font-bold text-teal-700 hover:bg-teal-100"
+                              >
+                                To Officer
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     )}
                   </td>
@@ -1911,29 +2191,38 @@ function ScholarshipList({
   applications,
   loading,
   onApply,
+  role,
 }: any) {
+  const { t } = useStudentLanguage();
+  const student = role === "student";
   const applied = new Set(
     applications.map((a: Application) => a.scholarship?._id),
   );
   return (
     <Panel
-      title="Active scholarships"
-      subtitle="Published opportunities with future deadlines"
+      title={student ? t("Active scholarships") : "Active scholarships"}
+      subtitle={
+        student
+          ? t("Published opportunities with future deadlines")
+          : "Published opportunities with future deadlines"
+      }
     >
       {loading ? (
-        <p className="p-5">Loading...</p>
+        <p className="p-5">{student ? t("Loading...") : "Loading..."}</p>
       ) : (
         <div className="grid gap-4 p-5 lg:grid-cols-2">
           {scholarships.length === 0 ? (
             <p className="text-sm text-slate-500">
-              No active scholarships are available.
+              {student
+                ? t("No active scholarships are available.")
+                : "No active scholarships are available."}
             </p>
           ) : (
             scholarships.map((item: Scholarship) => (
               <article key={item._id} className="rounded-2xl border p-5">
                 <div className="flex justify-between gap-4">
                   <div>
-                    <h3 className="font-bold text-[#193b61]">{item.name}</h3>
+                    <h3 className="font-bold text-slate-800">{item.name}</h3>
                     <p className="text-sm font-semibold text-teal-700">
                       {item.provider}
                     </p>
@@ -1945,8 +2234,10 @@ function ScholarshipList({
                     "Scholarship opportunity for eligible students."}
                 </p>
                 <p className="mt-3 text-xs text-slate-500">
-                  Deadline {new Date(item.deadline).toLocaleDateString()} ·{" "}
-                  {item.requiredDocuments?.length ?? 0} required documents
+                  {student ? t("Deadline") : "Deadline"}{" "}
+                  {new Date(item.deadline).toLocaleDateString()} ·{" "}
+                  {item.requiredDocuments?.length ?? 0}{" "}
+                  {student ? t("required documents") : "required documents"}
                 </p>
                 <button
                   disabled={applied.has(item._id)}
@@ -1954,8 +2245,12 @@ function ScholarshipList({
                   className="mt-4 cursor-pointer rounded-xl bg-[#193b61] px-4 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
                 >
                   {applied.has(item._id)
-                    ? "Application started"
-                    : "Start application"}
+                    ? student
+                      ? t("Application started")
+                      : "Application started"
+                    : student
+                      ? t("Start application")
+                      : "Start application"}
                 </button>
               </article>
             ))
@@ -1965,7 +2260,15 @@ function ScholarshipList({
     </Panel>
   );
 }
-type StatTone = "teal" | "slate" | "blue" | "green" | "amber" | "indigo" | "violet" | "rose";
+type StatTone =
+  | "teal"
+  | "slate"
+  | "blue"
+  | "green"
+  | "amber"
+  | "indigo"
+  | "violet"
+  | "rose";
 type StatCardData = {
   title: string;
   value: number;
@@ -1997,7 +2300,9 @@ function StatCard({ card, loading }: { card: StatCardData; loading: boolean }) {
             {loading ? "—" : card.value}
           </p>
         </div>
-        <span className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}>
+        <span
+          className={`flex size-11 shrink-0 items-center justify-center rounded-xl ${tone.icon}`}
+        >
           <Icon className="size-5" />
         </span>
       </div>
@@ -2012,7 +2317,7 @@ function Panel({ title, subtitle, children }: any) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-sm">
       <div className="border-b border-slate-100 px-5 py-4">
-        <h2 className="font-bold text-[#193b61]">{title}</h2>
+        <h2 className="font-bold text-slate-800">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-slate-500">{subtitle}</p>}
       </div>
       {children}
@@ -2023,8 +2328,8 @@ function NavIcon({ item }: { item: string }) {
   const Icon = item.includes("Scholar")
     ? BookOpen
     : item.includes("application") ||
-      item.includes("queue") ||
-      item.includes("decision")
+        item.includes("queue") ||
+        item.includes("decision")
       ? FileCheck2
       : item.includes("Document")
         ? FileText
@@ -2045,7 +2350,11 @@ function Brand({ light = false }: { light?: boolean }) {
       </div>
       <div>
         <p
-          className={`text-lg font-bold ${light ? "text-white" : "text-[#193b61]"}`}
+          className={`text-lg font-bold ${
+            light
+              ? "bg-gradient-to-r from-[#fbc7d4] to-[#9796f0] bg-clip-text text-transparent"
+              : "bg-gradient-to-r from-[#fbc7d4] to-[#9796f0] bg-clip-text text-transparent"
+          }`}
         >
           ScholarFlow
         </p>
