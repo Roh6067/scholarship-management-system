@@ -1029,7 +1029,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             </div>
           </div>
         </header>
-        <main className="mx-auto max-w-7xl space-y-6 p-5 sm:p-8">
+        <main className="mx-auto max-w-7xl space-y-6 bg-[#F8FAFC] p-5 sm:p-8">
           {error && (
             <div
               role="alert"
