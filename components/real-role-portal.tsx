@@ -286,7 +286,7 @@ export default function RealRolePortal() {
       />
     );
   return (
-    <StudentLanguageProvider enabled={user.role === "student"}>
+    <StudentLanguageProvider enabled>
       <Dashboard user={user} signOut={signOut} />
     </StudentLanguageProvider>
   );
@@ -938,7 +938,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
           </div>
         </div>
         <div className="px-5 pb-2 pt-7 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-500">
-          {isStudent ? t("Workspace") : "Workspace"}
+          {t("Workspace")}
         </div>
         <nav
           aria-label={`${labels[user.role]} navigation`}
@@ -976,7 +976,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
             className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-400 transition hover:bg-white/[0.07] hover:text-white focus-visible:bg-white/[0.07]"
           >
             <LogOut className="size-5" />
-            {isStudent ? t("Sign out") : "Sign out"}
+            {t("Sign out")}
           </button>
         </div>
       </aside>
@@ -1002,7 +1002,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 </span>
               </div>
               <h1 className="truncate text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                {isStudent ? t(readablePageTitle(user.role, active)) : readablePageTitle(user.role, active)}
+                {t(readablePageTitle(user.role, active))}
               </h1>
             </div>
           </div>
@@ -1023,12 +1023,12 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
               )}
             </button>
 
-            {isStudent && languageContext && (
-              <label className="sr-only" htmlFor="student-language">Language</label>
+            {languageContext && (
+              <label className="sr-only" htmlFor="portal-language">Language</label>
             )}
-            {isStudent && languageContext && (
+            {languageContext && (
               <select
-                id="student-language"
+                id="portal-language"
                 aria-label="Language / भाषा"
                 value={languageContext.language}
                 onChange={(event) => languageContext.setLanguage(event.target.value as "en" | "hi")}
@@ -1046,7 +1046,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                 <p className="max-w-32 truncate text-sm font-semibold text-slate-800">
                   {user.name}
                 </p>
-                <p className="text-xs text-slate-500">{labels[user.role]}</p>
+                <p className="text-xs text-slate-500">{t(labels[user.role])}</p>
               </div>
             </div>
           </div>
@@ -1088,7 +1088,7 @@ function Dashboard({ user, signOut }: { user: User; signOut: () => void }) {
                   className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-teal-200 hover:text-teal-700"
                 >
                   <RefreshCw className="size-4" />
-                  {isStudent ? t("Refresh data") : "Refresh data"}
+                  {t("Refresh data")}
                 </button>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
